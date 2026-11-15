@@ -1,0 +1,10 @@
+{
+  "name": "Campeonei — Ligas, Campeonatos, Apostas PIX e Mercado de Previsões",
+  "short_name": "Campeonei",
+  "description": "Plataforma oficial campeonei.com.br para gestão de federações, ligas, campeonatos, apostas esportivas regulamentadas e mercado de previsões em Material Design 3.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E1512",
+  "theme_color": "#006C4C",
+  "lang": "pt-BR"
+}

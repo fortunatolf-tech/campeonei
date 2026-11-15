@@ -1,0 +1,31 @@
+{
+  "name": "campeonei-platform",
+  "version": "1.0.0",
+  "description": "Plataforma web completa Campeonei (campeonei.com.br) - Gestão de Federações, Ligas e Campeonatos, Apostas Esportivas com PIX Instantâneo e Mercado de Previsões Esportivas em Material Design 3.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node tests/run-all-tests.js",
+    "test:security": "node --test tests/security-pentest.test.js",
+    "test:financial": "node --test tests/financial-pix.test.js",
+    "test:usability": "node --test tests/usability-3clicks.test.js",
+    "test:load": "node tests/load-10k.test.js"
+  },
+  "keywords": [
+    "campeonei",
+    "campeonatos",
+    "ligas",
+    "apostas-esportivas",
+    "mercado-de-previsoes",
+    "pix",
+    "material-design-3",
+    "lgpd",
+    "spa-mf"
+  ],
+  "author": "Campeonei Tecnologia Esportiva e Pagamentos S.A.",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
