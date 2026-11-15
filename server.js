@@ -150,10 +150,27 @@ function createAppServer(customDb = null) {
 }
 
 if (require.main === module) {
-  const port = Number(process.env.PORT || 3000);
+  const argPort = process.argv
+    .find((a) => a.startsWith('--port='))
+    ?.split('=')[1];
+  const preferredPort = Number(argPort || process.env.PORT || 3000);
+  const fallbackPort = 3080;
   const { server } = createAppServer();
-  server.listen(port, '0.0.0.0', () => {
-    console.log(`[CAMPEONEI.COM.BR] Plataforma Web segura iniciada em http://localhost:${port}`);
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && preferredPort === 3000) {
+      console.log(`[CAMPEONEI.COM.BR] Porta 3000 em uso por outro app; iniciando automaticamente na porta ${fallbackPort}...`);
+      server.listen(fallbackPort, '0.0.0.0', () => {
+        console.log(`[CAMPEONEI.COM.BR] Plataforma Web segura iniciada em http://localhost:${fallbackPort}`);
+      });
+    } else {
+      console.error(err);
+      process.exit(1);
+    }
+  });
+
+  server.listen(preferredPort, '0.0.0.0', () => {
+    console.log(`[CAMPEONEI.COM.BR] Plataforma Web segura iniciada em http://localhost:${preferredPort}`);
   });
 }
 
