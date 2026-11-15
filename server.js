@@ -109,7 +109,23 @@ function createAppServer(customDb = null) {
         return;
       }
 
-      // 3. Arquivos Estáticos da Aplicação Web (Material Design 3 SPA)
+      // 3. Suporte direto ao desafio SSL Let's Encrypt do aaPanel (/.well-known/acme-challenge/)
+      if (parsedUrl.pathname.startsWith('/.well-known/')) {
+        const safeWellKnown = path.normalize(parsedUrl.pathname).replace(/^(\.\.(\/|\\|$))+/, '');
+        const candidatePaths = [
+          path.join(__dirname, safeWellKnown),
+          path.join(publicDir, safeWellKnown)
+        ];
+        for (const candidate of candidatePaths) {
+          if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(fs.readFileSync(candidate));
+            return;
+          }
+        }
+      }
+
+      // 4. Arquivos Estáticos da Aplicação Web (Material Design 3 SPA)
       let safeRelPath = parsedUrl.pathname === '/' ? '/index.html' : parsedUrl.pathname;
       safeRelPath = path.normalize(safeRelPath).replace(/^(\.\.(\/|\\|$))+/, '');
       let filePath = path.join(publicDir, safeRelPath);
