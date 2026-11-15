@@ -22,6 +22,8 @@
       hsmStatus: {}
     },
     marketView: 'ALL',
+    searchQuery: '',
+    expandedMatchIds: new Set(),
     tipsterSportFilter: 'ALL',
     betSlip: [
       {
@@ -49,7 +51,7 @@
     clearTimeout(el._timer);
     el._timer = setTimeout(() => {
       el.classList.remove('show');
-    }, 3800);
+    }, 3600);
   }
 
   async function apiRequest(path, options = {}) {
@@ -89,11 +91,12 @@
         if (match) {
           match.minute = tick.minute;
           match.odds = tick.odds;
+          renderFeaturedHero();
           renderLiveMatches();
           const latEl = document.getElementById('metric-odds-latency');
           if (latEl) {
-            const ms = 9 + Math.floor(Math.random() * 9);
-            latEl.textContent = `${ms} ms • SSE Ao Vivo`;
+            const ms = 9 + Math.floor(Math.random() * 8);
+            latEl.textContent = `${ms} ms • Ao Vivo`;
           }
         }
       } catch {
@@ -115,10 +118,11 @@
         if (upd.standings && upd.standings.length && state.tournaments.length) {
           state.tournaments[0].standings = upd.standings;
         }
+        renderFeaturedHero();
         renderLiveMatches();
         renderTournaments();
       } catch {
-        // Ignora erro de parse
+        // Ignora erro
       }
     });
 
@@ -142,6 +146,7 @@
 
   function renderAll() {
     renderHeaderStatus();
+    renderFeaturedHero();
     renderLiveMatches();
     renderBetSlip();
     renderUserBets();
@@ -149,6 +154,8 @@
     renderPrizePreview();
     renderTournaments();
     renderTeamsRoster();
+    renderFederationsGrid();
+    renderTipstersPodium();
     renderTipstersRanking();
     renderPredictionsMarketplace();
     renderSecurityAndKyc();
@@ -162,6 +169,8 @@
 
     const balanceEl = document.getElementById('top-wallet-balance');
     if (balanceEl) balanceEl.textContent = formatBRL(u.walletBalance);
+    const bigBalanceEl = document.getElementById('wallet-card-big-balance');
+    if (bigBalanceEl) bigBalanceEl.textContent = formatBRL(u.walletBalance);
 
     const kycBadge = document.getElementById('header-kyc-badge');
     if (kycBadge) {
@@ -170,10 +179,10 @@
         kycBadge.textContent = 'ATLETA IMPEDIDO (LEI 14.790)';
       } else if (u.kycStatus === 'VERIFIED') {
         kycBadge.className = 'md3-badge badge-success';
-        kycBadge.textContent = `KYC VERIFICADO • ${u.role.toUpperCase()}`;
+        kycBadge.textContent = `KYC OK • ${u.role.toUpperCase()}`;
       } else {
         kycBadge.className = 'md3-badge badge-warning';
-        kycBadge.textContent = 'KYC PENDENTE (BLOQUEIO FIN.)';
+        kycBadge.textContent = 'KYC PENDENTE';
       }
     }
 
@@ -190,16 +199,103 @@
     const unreadCount = state.notifications.filter((n) => !n.read_status).length;
     const notifCountEl = document.getElementById('notif-unread-count');
     if (notifCountEl) notifCountEl.textContent = String(unreadCount);
+
+    const myBetsPill = document.getElementById('my-bets-count-pill');
+    if (myBetsPill) myBetsPill.textContent = String(state.bets.length);
   }
 
   /* ========================================================================
-     MÓDULO 2: PARTIDAS AO VIVO, MERCADOS E BILHETE DE APOSTAS (<= 3 CLIQUES)
+     HERO MATCH CENTER & PARTIDAS AO VIVO (UX ESCANEÁVEL E PROGRESSIVA)
      ======================================================================== */
+  function renderFeaturedHero() {
+    const hero = document.getElementById('featured-match-hero');
+    if (!hero || !state.matches.length) return;
+    const m = state.matches[0];
+    const mw = m.odds?.matchWinner || { home: 1.58, draw: 3.75, away: 5.8 };
+
+    hero.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span class="md3-badge badge-success"><span class="live-dot"></span> JOGO DESTAQUE AO VIVO • ${m.minute}'</span>
+          <span style="font-size: 0.8rem; color: var(--md-sys-color-on-surface-variant); font-weight: 600;">
+            ${m.tournament_name} • ${m.round_name}
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="team-avatar">${m.home_short}</span>
+            <strong style="font-size: 1.25rem;">${m.home_team_name}</strong>
+          </div>
+          <div class="score-pill tabular-nums">${m.home_score} : ${m.away_score}</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <strong style="font-size: 1.25rem;">${m.away_team_name}</strong>
+            <span class="team-avatar">${m.away_short}</span>
+          </div>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--md-sys-color-on-surface-variant); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span>⚡ ${m.stats.lastEvent || 'Partida em andamento'}</span>
+          <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-sync-match="${m.id}">
+            📡 Simular Gol Oficial (${m.official_feed_code})
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">
+          <span>Posse: <strong>${m.stats.possessionHome}%</strong></span>
+          <span>xG: <strong>${m.stats.xgHome} x ${m.stats.xgAway}</strong></span>
+          <span>Posse: <strong>${m.stats.possessionAway}%</strong></span>
+        </div>
+        <div class="momentum-bar-track">
+          <div class="momentum-bar-home" style="width: ${m.stats.possessionHome}%;"></div>
+        </div>
+        <div class="odds-grid-3">
+          <button type="button" class="odd-button"
+            data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+            data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
+            <span class="odd-label">1 • ${m.home_short}</span>
+            <span class="odd-value tabular-nums">@${Number(mw.home).toFixed(2)}</span>
+          </button>
+          <button type="button" class="odd-button"
+            data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+            data-bet-market="Resultado Final (1X2)" data-bet-selection="Empate" data-bet-odds="${mw.draw}">
+            <span class="odd-label">X • Empate</span>
+            <span class="odd-value tabular-nums">@${Number(mw.draw).toFixed(2)}</span>
+          </button>
+          <button type="button" class="odd-button"
+            data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+            data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
+            <span class="odd-label">2 • ${m.away_short}</span>
+            <span class="odd-value tabular-nums">@${Number(mw.away).toFixed(2)}</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   function renderLiveMatches() {
     const container = document.getElementById('live-matches-container');
     if (!container) return;
 
-    container.innerHTML = state.matches
+    const q = state.searchQuery.trim().toLowerCase();
+    const filteredMatches = state.matches.filter((m) => {
+      if (!q) return true;
+      return (
+        m.home_team_name.toLowerCase().includes(q) ||
+        m.away_team_name.toLowerCase().includes(q) ||
+        m.tournament_name.toLowerCase().includes(q) ||
+        m.sport.toLowerCase().includes(q)
+      );
+    });
+
+    if (!filteredMatches.length) {
+      container.innerHTML = `<div class="md3-card">Nenhuma partida encontrada para "${state.searchQuery}".</div>`;
+      return;
+    }
+
+    container.innerHTML = filteredMatches
       .map((m) => {
         const odds = m.odds || {};
         const mw = odds.matchWinner || { home: 1.8, draw: 3.3, away: 4.2 };
@@ -210,21 +306,21 @@
         const isSel = (market, selection) =>
           state.betSlip.some((s) => s.matchId === m.id && s.market === market && s.selection === selection);
 
-        const show1x2 = state.marketView === 'ALL' || state.marketView === '1X2';
-        const showHandicap = state.marketView === 'ALL' || state.marketView === 'HANDICAP';
-        const showGoals = state.marketView === 'ALL' || state.marketView === 'GOALS';
-
         const hcKeys = Object.keys(hc).slice(0, 2);
         const ouKeys = Object.keys(ou).slice(0, 2);
+        const isDrawerOpen =
+          state.expandedMatchIds.has(m.id) ||
+          state.marketView === 'HANDICAP' ||
+          state.marketView === 'GOALS';
 
         return `
           <article class="md3-card" id="match-card-${m.id}">
             <div class="match-card-header">
               <div>
-                <strong>${m.tournament_name}</strong> • <span>${m.round_name}</span>
+                <strong>${m.tournament_name}</strong> • <span>${m.sport}</span>
               </div>
               <span class="md3-badge badge-success tabular-nums">
-                <span class="live-dot"></span> AO VIVO ${m.minute}'
+                <span class="live-dot"></span> ${m.minute}'
               </span>
             </div>
 
@@ -240,108 +336,108 @@
               </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant); background: var(--md-sys-color-surface-container); padding: 6px 10px; border-radius: 8px;">
-              <span>Posse: <strong>${m.stats.possessionHome}% - ${m.stats.possessionAway}%</strong></span>
-              <span>Finalizações: <strong>${m.stats.shotsOnTargetHome} x ${m.stats.shotsOnTargetAway}</strong></span>
-              <span>Feed: <strong class="mono-code">${m.official_feed_code}</strong></span>
+            <div class="momentum-bar-track" title="Posse de bola ${m.stats.possessionHome}% x ${m.stats.possessionAway}%">
+              <div class="momentum-bar-home" style="width: ${m.stats.possessionHome}%;"></div>
             </div>
 
-            ${
-              show1x2
-                ? `
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
-                  Resultado Final (1X2)
-                </div>
-                <div class="odds-grid-3">
-                  <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.home_team_name) ? 'selected' : ''}"
-                    data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                    data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
-                    <span class="odd-label">1 • ${m.home_short}</span>
-                    <span class="odd-value tabular-nums">@${Number(mw.home).toFixed(2)}</span>
-                  </button>
-                  <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', 'Empate') ? 'selected' : ''}"
-                    data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                    data-bet-market="Resultado Final (1X2)" data-bet-selection="Empate" data-bet-odds="${mw.draw}">
-                    <span class="odd-label">X • Empate</span>
-                    <span class="odd-value tabular-nums">@${Number(mw.draw).toFixed(2)}</span>
-                  </button>
-                  <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.away_team_name) ? 'selected' : ''}"
-                    data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                    data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
-                    <span class="odd-label">2 • ${m.away_short}</span>
-                    <span class="odd-value tabular-nums">@${Number(mw.away).toFixed(2)}</span>
-                  </button>
-                </div>
+            <!-- Mercado Principal 1X2 (Sempre Visível e Ergonômico >= 48px) -->
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; color: var(--md-sys-color-on-surface-variant);">
+                <span>Resultado Final (1X2)</span>
+                <span>Posse ${m.stats.possessionHome}%-${m.stats.possessionAway}% • Chutes ${m.stats.shotsOnTargetHome}x${m.stats.shotsOnTargetAway}</span>
               </div>
-            `
-                : ''
-            }
-
-            ${
-              showHandicap && hcKeys.length
-                ? `
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
-                  Handicap Asiático
-                </div>
-                <div class="odds-grid-2">
-                  ${hcKeys
-                    .map((k) => {
-                      const item = hc[k];
-                      return `
-                        <button type="button" class="odd-button ${isSel('Handicap Asiático', item.label) ? 'selected' : ''}"
-                          data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                          data-bet-market="Handicap Asiático" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
-                          <span class="odd-label">${item.label}</span>
-                          <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
-                        </button>
-                      `;
-                    })
-                    .join('')}
-                </div>
+              <div class="odds-grid-3">
+                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.home_team_name) ? 'selected' : ''}"
+                  data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                  data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
+                  <span class="odd-label">1 • ${m.home_short}</span>
+                  <span class="odd-value tabular-nums">@${Number(mw.home).toFixed(2)}</span>
+                </button>
+                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', 'Empate') ? 'selected' : ''}"
+                  data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                  data-bet-market="Resultado Final (1X2)" data-bet-selection="Empate" data-bet-odds="${mw.draw}">
+                  <span class="odd-label">X • Empate</span>
+                  <span class="odd-value tabular-nums">@${Number(mw.draw).toFixed(2)}</span>
+                </button>
+                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.away_team_name) ? 'selected' : ''}"
+                  data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                  data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
+                  <span class="odd-label">2 • ${m.away_short}</span>
+                  <span class="odd-value tabular-nums">@${Number(mw.away).toFixed(2)}</span>
+                </button>
               </div>
-            `
-                : ''
-            }
+            </div>
 
-            ${
-              showGoals && ouKeys.length
-                ? `
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
-                  Número de Gols / Pontos &amp; Ambas Marcam
+            <!-- Gaveta de Mercados Extras (Progressive Disclosure) -->
+            <div class="extra-markets-drawer ${isDrawerOpen ? 'open' : ''}">
+              ${
+                hcKeys.length
+                  ? `
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
+                    Handicap Asiático
+                  </div>
+                  <div class="odds-grid-2">
+                    ${hcKeys
+                      .map((k) => {
+                        const item = hc[k];
+                        return `
+                          <button type="button" class="odd-button ${isSel('Handicap Asiático', item.label) ? 'selected' : ''}"
+                            data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                            data-bet-market="Handicap Asiático" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
+                            <span class="odd-label">${item.label}</span>
+                            <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
+                          </button>
+                        `;
+                      })
+                      .join('')}
+                  </div>
                 </div>
-                <div class="odds-grid-3">
-                  ${ouKeys
-                    .map((k) => {
-                      const item = ou[k];
-                      return `
-                        <button type="button" class="odd-button ${isSel('Total de Gols', item.label) ? 'selected' : ''}"
-                          data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                          data-bet-market="Total de Gols" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
-                          <span class="odd-label">${item.label}</span>
-                          <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
-                        </button>
-                      `;
-                    })
-                    .join('')}
-                  <button type="button" class="odd-button ${isSel('Ambas Marcam', 'Ambas Marcam: Sim') ? 'selected' : ''}"
-                    data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                    data-bet-market="Ambas Marcam" data-bet-selection="Ambas Marcam: Sim" data-bet-odds="${btts.yes}">
-                    <span class="odd-label">Ambas: Sim</span>
-                    <span class="odd-value tabular-nums">@${Number(btts.yes).toFixed(2)}</span>
-                  </button>
-                </div>
-              </div>
-            `
-                : ''
-            }
+              `
+                  : ''
+              }
 
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid var(--md-sys-color-outline-variant); font-size: 0.75rem;">
-              <span style="color: var(--md-sys-color-on-surface-variant);">${m.stats.lastEvent || ''}</span>
+              ${
+                ouKeys.length
+                  ? `
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
+                    Total de Gols / Pontos &amp; Ambas Marcam
+                  </div>
+                  <div class="odds-grid-3">
+                    ${ouKeys
+                      .map((k) => {
+                        const item = ou[k];
+                        return `
+                          <button type="button" class="odd-button ${isSel('Total de Gols', item.label) ? 'selected' : ''}"
+                            data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                            data-bet-market="Total de Gols" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
+                            <span class="odd-label">${item.label}</span>
+                            <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
+                          </button>
+                        `;
+                      })
+                      .join('')}
+                    <button type="button" class="odd-button ${isSel('Ambas Marcam', 'Ambas Marcam: Sim') ? 'selected' : ''}"
+                      data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
+                      data-bet-market="Ambas Marcam" data-bet-selection="Ambas Marcam: Sim" data-bet-odds="${btts.yes}">
+                      <span class="odd-label">Ambas: Sim</span>
+                      <span class="odd-value tabular-nums">@${Number(btts.yes).toFixed(2)}</span>
+                    </button>
+                  </div>
+                </div>
+              `
+                  : ''
+              }
+            </div>
+
+            <!-- Rodapé Limpo do Card -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid var(--md-sys-color-outline-variant);">
+              <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-toggle-markets="${m.id}">
+                ${isDrawerOpen ? '▲ Ocultar Mercados Extras' : '▼ +5 Mercados (Handicap & Gols)'}
+              </button>
               <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-sync-match="${m.id}">
-                📡 Simular Gol no Feed Oficial
+                ⚽ Simular Gol Oficial
               </button>
             </div>
           </article>
@@ -353,42 +449,44 @@
   function renderBetSlip() {
     const container = document.getElementById('betslip-items-container');
     const countBadge = document.getElementById('betslip-count-badge');
+    const topSlipCount = document.getElementById('top-slip-count');
     const totalOddsEl = document.getElementById('betslip-total-odds');
     const potReturnEl = document.getElementById('betslip-potential-return');
     const stakeInput = document.getElementById('betslip-stake-input');
-
-    if (!container) return;
 
     const count = state.betSlip.length;
     if (countBadge) {
       countBadge.textContent = count === 0 ? 'Vazio' : count === 1 ? 'Simples (1)' : `Múltipla (${count})`;
     }
+    if (topSlipCount) topSlipCount.textContent = String(count);
 
-    if (count === 0) {
-      container.innerHTML = `
-        <div class="md3-card-filled" style="text-align: center; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-          Clique em qualquer cotação (@Odd) nas partidas ao vivo para adicionar ao bilhete.
-        </div>
-      `;
-    } else {
-      container.innerHTML = state.betSlip
-        .map(
-          (item, idx) => `
-          <div class="betslip-selection-item">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <strong style="font-size: 0.85rem;">${item.selection}</strong>
-              <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">
-              <span>${item.market} • ${item.matchLabel}</span>
-              <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" style="height: 24px; padding: 0 8px;" data-remove-slip="${idx}">
-                ✕
-              </button>
-            </div>
+    if (container) {
+      if (count === 0) {
+        container.innerHTML = `
+          <div class="md3-card-filled" style="text-align: center; font-size: 0.83rem; color: var(--md-sys-color-on-surface-variant);">
+            Clique em qualquer cotação (<strong>@Odd</strong>) nas partidas para adicionar ao bilhete.
           </div>
-        `
-        )
-        .join('');
+        `;
+      } else {
+        container.innerHTML = state.betSlip
+          .map(
+            (item, idx) => `
+            <div class="betslip-selection-item">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 0.88rem;">${item.selection}</strong>
+                <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">
+                <span>${item.market} • ${item.matchLabel}</span>
+                <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" style="min-height: 26px; padding: 0 8px;" data-remove-slip="${idx}">
+                  ✕
+                </button>
+              </div>
+            </div>
+          `
+          )
+          .join('');
+      }
     }
 
     const combinedOdds =
@@ -398,13 +496,21 @@
 
     if (totalOddsEl) totalOddsEl.textContent = `@${combinedOdds.toFixed(2)}`;
     if (potReturnEl) potReturnEl.textContent = formatBRL(potential);
+
+    // Atualiza barra flutuante Mobile/Tablet
+    const fabCount = document.getElementById('mobile-fab-count');
+    const fabOdds = document.getElementById('mobile-fab-odds');
+    const fabReturn = document.getElementById('mobile-fab-return');
+    if (fabCount) fabCount.textContent = String(count);
+    if (fabOdds) fabOdds.textContent = `@${combinedOdds.toFixed(2)}`;
+    if (fabReturn) fabReturn.textContent = formatBRL(potential);
   }
 
   function renderUserBets() {
     const wrap = document.getElementById('user-bets-list');
     if (!wrap) return;
     if (!state.bets.length) {
-      wrap.innerHTML = `<div style="padding: 16px; font-size: 0.85rem;">Nenhuma aposta registrada para este usuário ainda.</div>`;
+      wrap.innerHTML = `<div style="padding: 18px; font-size: 0.86rem;">Nenhuma aposta registrada ainda.</div>`;
       return;
     }
 
@@ -412,13 +518,13 @@
       <table class="md3-table">
         <thead>
           <tr>
-            <th>ID Bilhete</th>
-            <th>Tipo &amp; Seleções</th>
-            <th>Cotação</th>
-            <th>Valor Apostado</th>
+            <th>Bilhete</th>
+            <th>Seleções</th>
+            <th>Odd Total</th>
+            <th>Valor</th>
             <th>Retorno Potencial</th>
             <th>Integridade ML</th>
-            <th>Status / Cashout</th>
+            <th>Ação / Status</th>
           </tr>
         </thead>
         <tbody>
@@ -431,12 +537,12 @@
                   <td><strong>${b.bet_type === 'MULTIPLE' ? 'Múltipla' : 'Simples'}</strong>: ${sels}</td>
                   <td class="tabular-nums"><strong>@${Number(b.combined_odds).toFixed(2)}</strong></td>
                   <td class="tabular-nums">${formatBRL(b.stake_amount)} (${b.payment_method})</td>
-                  <td class="tabular-nums" style="color: var(--md-sys-color-primary); font-weight: 700;">
+                  <td class="tabular-nums" style="color: var(--md-sys-color-primary); font-weight: 800;">
                     ${formatBRL(b.potential_return)}
                   </td>
                   <td>
                     <span class="md3-badge ${b.ml_risk_level === 'LOW' ? 'badge-success' : 'badge-warning'}">
-                      Score ${b.ml_risk_score}/100 (${b.ml_risk_level})
+                      Score ${b.ml_risk_score}/100
                     </span>
                   </td>
                   <td>
@@ -458,7 +564,7 @@
   }
 
   /* ========================================================================
-     MÓDULO 1: FEDERAÇÕES, TIMES, CAMPEONATOS E PREMIAÇÃO AUTOMÁTICA
+     ABA 2: CAMPEONATOS, CLUBES E FEDERAÇÕES
      ======================================================================== */
   function renderFederationOptions() {
     const sel = document.getElementById('trn-fed-select');
@@ -477,19 +583,18 @@
     const maxTeams = Number(maxTeamsEl.value || 16);
     const entryFee = Number(feeEl.value || 0);
     const gross = maxTeams * entryFee;
-    const fee = gross * 0.1;
-    const net = gross - fee;
+    const net = gross * 0.9;
 
     box.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-        <strong style="font-size: 0.85rem;">Cálculo Automático de Premiação (Custódia PIX Garantida)</strong>
-        <span class="md3-badge badge-success tabular-nums">Líquido: ${formatBRL(net)}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <strong style="font-size: 0.85rem;">Premiação Líquida Automática (90% Pool):</strong>
+        <span class="md3-badge badge-success tabular-nums">${formatBRL(net)}</span>
       </div>
       <div class="md3-grid-4" style="font-size: 0.78rem;">
-        <div>1º Lugar (60%): <strong class="tabular-nums">${formatBRL(net * 0.6)}</strong></div>
-        <div>2º Lugar (25%): <strong class="tabular-nums">${formatBRL(net * 0.25)}</strong></div>
-        <div>3º Lugar (10%): <strong class="tabular-nums">${formatBRL(net * 0.1)}</strong></div>
-        <div>Artilheiro (5%): <strong class="tabular-nums">${formatBRL(net * 0.05)}</strong></div>
+        <div>🥇 1º (60%): <strong class="tabular-nums">${formatBRL(net * 0.6)}</strong></div>
+        <div>🥈 2º (25%): <strong class="tabular-nums">${formatBRL(net * 0.25)}</strong></div>
+        <div>🥉 3º (10%): <strong class="tabular-nums">${formatBRL(net * 0.1)}</strong></div>
+        <div>⚽ Craque (5%): <strong class="tabular-nums">${formatBRL(net * 0.05)}</strong></div>
       </div>
     `;
   }
@@ -507,13 +612,20 @@
             <tr>
               <td class="tabular-nums"><strong>${r.pos}º</strong></td>
               <td><strong>${r.teamName}</strong> <span class="mono-code">(${r.short})</span></td>
-              <td class="tabular-nums"><strong>${r.pts}</strong></td>
+              <td class="tabular-nums"><strong style="color: var(--md-sys-color-primary);">${r.pts}</strong></td>
               <td class="tabular-nums">${r.played}</td>
               <td class="tabular-nums">${r.wins}</td>
               <td class="tabular-nums">${r.draws}</td>
               <td class="tabular-nums">${r.losses}</td>
               <td class="tabular-nums">${r.gf}:${r.ga} (${r.gd >= 0 ? '+' + r.gd : r.gd})</td>
-              <td>${(r.form || []).join(' ')}</td>
+              <td>
+                ${(r.form || [])
+                  .map(
+                    (f) =>
+                      `<span class="md3-badge ${f === 'V' ? 'badge-success' : f === 'D' ? 'badge-error' : 'badge-neutral'}" style="padding: 2px 6px; margin-right: 2px;">${f}</span>`
+                  )
+                  .join('')}
+              </td>
             </tr>
           `
           )
@@ -524,26 +636,24 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  <h3 style="margin: 0; font-size: 1.15rem;">${tr.name}</h3>
+                  <h3 style="margin: 0; font-size: 1.2rem;">${tr.name}</h3>
                   <span class="md3-badge badge-success">${tr.format}</span>
-                  <span class="md3-badge badge-neutral">${tr.registered_teams_count}/${tr.max_teams} Times</span>
+                  <span class="md3-badge badge-neutral">${tr.registered_teams_count}/${tr.max_teams} Clubes</span>
                 </div>
-                <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--md-sys-color-on-surface-variant);">
-                  Fonte Oficial: <strong>${tr.official_data_source}</strong> • Critérios de Desempate: <strong>${(tr.tiebreakerRules || []).join(' > ')}</strong>
+                <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
+                  Feed Oficial: <strong>${tr.official_data_source}</strong> • Desempate: <strong>${(tr.tiebreakerRules || []).join(' > ')}</strong>
                 </p>
               </div>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-invite-trn="${tr.id}">
-                  ✉️ Convidar Clube &amp; Inscrição PIX (${formatBRL(tr.entry_fee)})
-                </button>
-              </div>
+              <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-invite-trn="${tr.id}">
+                ✉️ Convidar Clube &amp; Inscrição PIX (${formatBRL(tr.entry_fee)})
+              </button>
             </div>
 
-            <div class="md3-grid-4" style="background: var(--md-sys-color-surface-container); padding: 12px; border-radius: 12px; font-size: 0.82rem;">
-              <div>Inscrição por Clube: <strong class="tabular-nums">${formatBRL(tr.entry_fee)}</strong></div>
-              <div>Premiação Líquida: <strong class="tabular-nums" style="color: var(--md-sys-color-primary);">${formatBRL(tr.prize_pool_net)}</strong></div>
-              <div>Campeão (1º): <strong class="tabular-nums">${formatBRL(dist.champion1st?.amount || tr.prize_pool_net * 0.6)}</strong></div>
-              <div>Vice (2º): <strong class="tabular-nums">${formatBRL(dist.runnerUp2nd?.amount || tr.prize_pool_net * 0.25)}</strong></div>
+            <div class="md3-grid-4" style="background: var(--md-sys-color-surface-container); padding: 14px; border-radius: 14px; font-size: 0.84rem;">
+              <div>Inscrição: <strong class="tabular-nums">${formatBRL(tr.entry_fee)}</strong></div>
+              <div>Pool Líquido: <strong class="tabular-nums" style="color: var(--md-sys-color-primary);">${formatBRL(tr.prize_pool_net)}</strong></div>
+              <div>🥇 Campeão (60%): <strong class="tabular-nums">${formatBRL(dist.champion1st?.amount || tr.prize_pool_net * 0.6)}</strong></div>
+              <div>🥈 Vice (25%): <strong class="tabular-nums">${formatBRL(dist.runnerUp2nd?.amount || tr.prize_pool_net * 0.25)}</strong></div>
             </div>
 
             <div class="md3-table-wrap">
@@ -558,7 +668,7 @@
                     <th>E</th>
                     <th>D</th>
                     <th>GP:GC (SG)</th>
-                    <th>Últimos Jogos</th>
+                    <th>Forma Recente</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -579,43 +689,45 @@
     grid.innerHTML = state.teams
       .map(
         (t) => `
-        <div class="md3-card-filled" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="md3-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong style="font-size: 1rem;">${t.name} (${t.short_name})</strong>
-              <div style="font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">
-                ${t.city}/${t.state} • Estádio: ${t.stadium} • Técnico: ${t.coach_name}
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="team-avatar">${t.short_name}</span>
+              <div>
+                <strong style="font-size: 1.05rem;">${t.name}</strong>
+                <div style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+                  ${t.city}/${t.state} • ${t.stadium} • Técnico: ${t.coach_name}
+                </div>
               </div>
             </div>
             <span class="md3-badge badge-success tabular-nums">Elo ${t.elo_rating}</span>
           </div>
 
-          <div style="font-size: 0.76rem; display: flex; gap: 12px; flex-wrap: wrap;">
-            <span>Histórico: <strong>${t.history.nationalTitles || 0} Títulos Nacionais</strong></span>
-            <span>Campanha: <strong>${t.stats.wins}V ${t.stats.draws}E ${t.stats.losses}D (${t.stats.goalsFor} GP)</strong></span>
+          <div style="font-size: 0.8rem; display: flex; gap: 14px; flex-wrap: wrap;">
+            <span>🏆 <strong>${t.history.nationalTitles || 0} Títulos Nacionais</strong></span>
+            <span>📊 Campanha: <strong>${t.stats.wins}V ${t.stats.draws}E ${t.stats.losses}D (${t.stats.goalsFor} GP)</strong></span>
           </div>
 
           <div class="md3-table-wrap">
-            <table class="md3-table" style="font-size: 0.76rem;">
+            <table class="md3-table" style="font-size: 0.8rem;">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Atleta</th>
+                  <th>Atleta do Elenco</th>
                   <th>Posição</th>
                   <th>OVR</th>
-                  <th>Gols/Pts</th>
+                  <th>Desempenho</th>
                 </tr>
               </thead>
               <tbody>
                 ${(t.roster || [])
-                  .slice(0, 4)
                   .map(
                     (p) => `
                   <tr>
-                    <td class="tabular-nums">${p.number}</td>
+                    <td class="tabular-nums"><strong>${p.number}</strong></td>
                     <td><strong>${p.name}</strong></td>
                     <td>${p.position}</td>
-                    <td class="tabular-nums">${p.rating}</td>
+                    <td class="tabular-nums"><span class="md3-badge badge-neutral">${p.rating}</span></td>
                     <td class="tabular-nums">${p.goals}G / ${p.assists}A</td>
                   </tr>
                 `
@@ -630,9 +742,78 @@
       .join('');
   }
 
+  function renderFederationsGrid() {
+    const grid = document.getElementById('federations-cards-grid');
+    if (!grid) return;
+    grid.innerHTML = state.federations
+      .map(
+        (f) => `
+        <div class="md3-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="team-avatar">${f.acronym}</span>
+              <div>
+                <strong style="font-size: 1.05rem;">${f.name}</strong>
+                <div style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+                  Modalidade: ${f.sport} • Jurisdição: ${f.state}
+                </div>
+              </div>
+            </div>
+            <span class="md3-badge badge-success">HOMOLOGADA</span>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
+            <div>Presidência / Diretoria: <strong>${f.president_name}</strong></div>
+            <div>Integração Oficial de Súmulas: <strong class="mono-code">${f.official_feed_provider}</strong></div>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+  }
+
   /* ========================================================================
-     MÓDULO 3: MERCADO DE PREVISÕES ESPORTIVAS E RANKING DE PROGNOSTICADORES
+     ABA 3: MERCADO DE PREVISÕES ESPORTIVAS & PÓDIO DE PROGNOSTICADORES
      ======================================================================== */
+  function renderTipstersPodium() {
+    const grid = document.getElementById('tipsters-podium-grid');
+    if (!grid) return;
+
+    const filtered =
+      state.tipsterSportFilter === 'ALL'
+        ? state.tipstersRanking
+        : state.tipstersRanking.filter(
+            (r) => r.specialty_sport.toLowerCase() === state.tipsterSportFilter.toLowerCase()
+          );
+
+    grid.innerHTML = filtered
+      .map(
+        (r, idx) => `
+        <div class="md3-card" style="gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="md3-badge badge-success">#${idx + 1} ${r.specialty_sport}</span>
+            <strong class="tabular-nums" style="color: var(--md-sys-color-primary); font-size: 1rem;">
+              ROI +${Number(r.roi_pct).toFixed(1)}%
+            </strong>
+          </div>
+          <div style="font-weight: 800; font-size: 0.95rem;">${r.display_name}</div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+            <span>Taxa de Acerto: <strong>${Number(r.win_rate_pct).toFixed(1)}%</strong></span>
+            <span>Consistência: <strong>${Number(r.consistency_score).toFixed(1)}%</strong></span>
+          </div>
+          <div class="momentum-bar-track">
+            <div class="momentum-bar-home" style="width: ${r.win_rate_pct}%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem;">
+            <span style="color: var(--md-sys-color-success); font-weight: 700;">${r.greens} GREEN</span>
+            <span style="color: var(--md-sys-color-error); font-weight: 700;">${r.reds} RED</span>
+            <span class="tabular-nums"><strong>+${Number(r.profit_units).toFixed(1)}u</strong></span>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+  }
+
   function renderTipstersRanking() {
     const wrap = document.getElementById('tipsters-ranking-table');
     if (!wrap) return;
@@ -648,15 +829,15 @@
       <table class="md3-table">
         <thead>
           <tr>
-            <th>Pos</th>
-            <th>Prognosticador Verificado</th>
+            <th>Rank</th>
+            <th>Prognosticador</th>
             <th>Esporte</th>
-            <th>Acertos / Erros (Histórico)</th>
+            <th>Histórico Público</th>
             <th>Taxa de Acerto</th>
             <th>ROI Auditado</th>
             <th>Consistência</th>
-            <th>Lucro (Unid.)</th>
-            <th>Sequência Pública</th>
+            <th>Unidades</th>
+            <th>Sequência Recente</th>
           </tr>
         </thead>
         <tbody>
@@ -668,9 +849,8 @@
               <td><strong>${r.display_name}</strong></td>
               <td><span class="md3-badge badge-neutral">${r.specialty_sport}</span></td>
               <td class="tabular-nums">
-                <strong style="color: var(--md-sys-color-success);">${r.greens} GREEN</strong> /
-                <strong style="color: var(--md-sys-color-error);">${r.reds} RED</strong>
-                (${r.total_predictions} picks)
+                <strong style="color: var(--md-sys-color-success);">${r.greens}W</strong> /
+                <strong style="color: var(--md-sys-color-error);">${r.reds}L</strong>
               </td>
               <td class="tabular-nums"><strong>${Number(r.win_rate_pct).toFixed(1)}%</strong></td>
               <td class="tabular-nums" style="color: var(--md-sys-color-primary); font-weight: 800;">
@@ -725,35 +905,59 @@
               ${statusBadge}
             </div>
 
-            <div style="font-size: 0.9rem;">
-              <div>Partida: <strong>${p.matchLabel}</strong></div>
-              <div>Mercado: <strong>${p.marketType}</strong> — Entrada: <strong style="color: var(--md-sys-color-primary);">${p.selectionLabel} (@${Number(p.recommendedOdds).toFixed(2)})</strong></div>
+            <div style="font-size: 0.92rem;">
+              <div style="color: var(--md-sys-color-on-surface-variant); font-size: 0.8rem;">${p.matchLabel} • ${p.marketType}</div>
+              <div style="font-weight: 800; font-size: 1.02rem; margin-top: 2px;">
+                Entrada: <span style="color: var(--md-sys-color-primary);">${p.selectionLabel} (@${Number(p.recommendedOdds).toFixed(2)})</span>
+              </div>
             </div>
 
-            <p style="margin: 0; font-size: 0.83rem; color: var(--md-sys-color-on-surface-variant);">
+            <p style="margin: 0; font-size: 0.84rem; color: var(--md-sys-color-on-surface-variant);">
               ${p.analysisPreview}
             </p>
 
             ${
               p.isUnlocked
                 ? `
-              <div class="md3-card-filled" style="border-left: 4px solid var(--md-sys-color-primary); font-size: 0.82rem;">
-                <strong>🔓 Relatório Completo Desbloqueado (HSM AES-256-GCM):</strong>
+              <div class="md3-card-filled" style="border-left: 4px solid var(--md-sys-color-primary); font-size: 0.83rem;">
+                <strong>🔓 Relatório Tático Desbloqueado (HSM AES-256-GCM):</strong>
                 <div style="margin-top: 4px;">${p.analysisFullUnlocked}</div>
               </div>
             `
-                : `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant);">
-                <div>
-                  <span style="font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">Valor definido pelo prognosticador:</span>
-                  <div class="tabular-nums" style="font-size: 1.05rem; font-weight: 800;">${formatBRL(p.price)} <span style="font-size: 0.74rem; font-weight: 400;">(${p.salesCount} compradores)</span></div>
-                </div>
-                <button type="button" class="md3-btn md3-btn-filled md3-btn-sm" data-buy-prediction="${p.id}">
-                  🔓 Comprar &amp; Desbloquear com PIX (${formatBRL(p.price)})
-                </button>
-              </div>
-            `
+                : ''
             }
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant);">
+              ${
+                !p.isUnlocked
+                  ? `
+                <div>
+                  <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Acesso VIP:</span>
+                  <strong class="tabular-nums" style="font-size: 1rem; margin-left: 4px;">${formatBRL(p.price)}</strong>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button type="button" class="md3-btn md3-btn-filled md3-btn-sm" data-buy-prediction="${p.id}">
+                    🔓 Comprar com PIX (${formatBRL(p.price)})
+                  </button>
+                  <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm"
+                    data-copy-pick-match="${p.matchId}" data-copy-pick-label="${p.matchLabel}"
+                    data-copy-pick-market="${p.marketType}" data-copy-pick-selection="${p.selectionLabel}"
+                    data-copy-pick-odds="${p.recommendedOdds}">
+                    🎯 Copiar para Bilhete
+                  </button>
+                </div>
+              `
+                  : `
+                <span style="font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">${p.salesCount} leitores verificados</span>
+                <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm"
+                  data-copy-pick-match="${p.matchId}" data-copy-pick-label="${p.matchLabel}"
+                  data-copy-pick-market="${p.marketType}" data-copy-pick-selection="${p.selectionLabel}"
+                  data-copy-pick-odds="${p.recommendedOdds}">
+                  🎯 Copiar Entrada para o Bilhete (@${Number(p.recommendedOdds).toFixed(2)})
+                </button>
+              `
+              }
+            </div>
           </div>
         `;
       })
@@ -761,7 +965,7 @@
   }
 
   /* ========================================================================
-     MÓDULO 4: SEGURANÇA, KYC, MFA, JOGO RESPONSÁVEL E LGPD
+     ABA 4 & ABA 5: SEGURANÇA, KYC, MFA E PAINEL ADMINISTRATIVO RBAC
      ======================================================================== */
   function renderSecurityAndKyc() {
     const u = state.currentUser;
@@ -770,7 +974,7 @@
     const pill = document.getElementById('security-kyc-status-pill');
     if (pill) {
       pill.className = `md3-badge ${u.kycStatus === 'VERIFIED' ? 'badge-success' : 'badge-warning'}`;
-      pill.textContent = u.kycStatus === 'VERIFIED' ? 'IDENTIDADE VERIFICADA' : 'KYC PENDENTE';
+      pill.textContent = u.kycStatus === 'VERIFIED' ? 'VERIFICADO' : 'PENDENTE';
     }
 
     const totpCodeEl = document.getElementById('mfa-demo-totp-code');
@@ -779,9 +983,6 @@
     }
   }
 
-  /* ========================================================================
-     MÓDULO 5: PAINEL ADMINISTRATIVO HIERÁRQUICO (RBAC) & LEDGER SHA-256
-     ======================================================================== */
   function renderAdminDashboard() {
     const u = state.currentUser;
     if (!u) return;
@@ -792,15 +993,15 @@
       banner.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <strong>Sessão Hierárquica RBAC Ativa:</strong> ${u.name}
-            <span class="md3-badge badge-success" style="margin-left: 8px;">PERFIL: ${u.role.toUpperCase()}</span>
+            <strong>Operador Autenticado:</strong> ${u.name}
+            <span class="md3-badge badge-success" style="margin-left: 8px;">RBAC: ${u.role.toUpperCase()}</span>
             <div style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">
-              Permissões Habilitadas: <span class="mono-code">${(u.permissions || []).join(', ')}</span>
+              Escopos ativos: <span class="mono-code">${(u.permissions || []).join(', ')}</span>
             </div>
           </div>
           <div style="font-size: 0.78rem; text-align: right;">
             <div>Módulo HSM: <strong>${hsmStatus.module || 'CloudHSM FIPS 140-3'}</strong></div>
-            <div>Chave Ativa: <span class="mono-code">${hsmStatus.activeKeyId || 'hsm-dek-2026-v1'}</span> (${hsmStatus.totalKeysInVault || 1} chave(s) no cofre)</div>
+            <div>Chave DEK Ativa: <span class="mono-code">${hsmStatus.activeKeyId || 'hsm-dek-2026-v1'}</span></div>
           </div>
         </div>
       `;
@@ -811,7 +1012,7 @@
       ledgerBadge.className = `md3-badge ${state.ledgerIntegrity.valid ? 'badge-success' : 'badge-error'}`;
       ledgerBadge.textContent = state.ledgerIntegrity.valid
         ? `CADEIA SHA-256 100% ÍNTEGRA (${state.ledgerIntegrity.totalBlocks} BLOCOS)`
-        : 'ALERTA: VIOLAÇÃO DE INTEGRIDADE';
+        : 'VIOLAÇÃO DE INTEGRIDADE DETECTADA';
     }
 
     const ledgerTable = document.getElementById('admin-ledger-table');
@@ -820,13 +1021,13 @@
         <table class="md3-table">
           <thead>
             <tr>
-              <th>Bloco #</th>
-              <th>ID Transação</th>
-              <th>Tipo Operação</th>
+              <th>#</th>
+              <th>Transação</th>
+              <th>Tipo</th>
               <th>Valor</th>
               <th>Saldo Pós</th>
-              <th>Hash Anterior (prev_hash)</th>
-              <th>Hash do Bloco SHA-256</th>
+              <th>prev_hash</th>
+              <th>block_hash SHA-256</th>
               <th>Assinatura HSM</th>
             </tr>
           </thead>
@@ -840,9 +1041,9 @@
                 <td><span class="md3-badge badge-neutral">${b.type}</span></td>
                 <td class="tabular-nums"><strong>${formatBRL(b.amount)}</strong></td>
                 <td class="tabular-nums">${formatBRL(b.balance_after)}</td>
-                <td class="mono-code" title="${b.prev_hash}">${String(b.prev_hash).slice(0, 12)}...</td>
-                <td class="mono-code" title="${b.block_hash}" style="color: var(--md-sys-color-primary);">${String(b.block_hash).slice(0, 14)}...</td>
-                <td class="mono-code" title="${b.hsm_signature}">✓ ${String(b.hsm_signature).slice(0, 10)}...</td>
+                <td class="mono-code">${String(b.prev_hash).slice(0, 10)}...</td>
+                <td class="mono-code" style="color: var(--md-sys-color-primary);">${String(b.block_hash).slice(0, 12)}...</td>
+                <td class="mono-code">✓ ${String(b.hsm_signature).slice(0, 10)}...</td>
               </tr>
             `
               )
@@ -859,18 +1060,18 @@
           (tk) => `
           <div class="md3-card-filled" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <div>
-              <div style="font-size: 0.85rem;">
+              <div style="font-size: 0.86rem;">
                 <strong>${tk.id} — ${tk.subject}</strong>
                 <span class="md3-badge ${tk.status === 'RESOLVED' ? 'badge-success' : 'badge-warning'}">${tk.status}</span>
               </div>
-              <div style="font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">
-                Solicitante: ${tk.user_name} • ${tk.description}
+              <div style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+                ${tk.user_name}: ${tk.description}
               </div>
             </div>
             ${
               tk.status !== 'RESOLVED'
                 ? `<button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-resolve-ticket="${tk.id}">
-                     ✓ Resolver Chamado
+                     ✓ Resolver
                    </button>`
                 : ''
             }
@@ -886,8 +1087,7 @@
         .map(
           (d) => `
           <div class="md3-card-filled" style="font-size: 0.78rem;">
-            <strong>${d.id} • ${d.action_type}</strong> contra <strong>${d.target_name}</strong>: ${d.reason}
-            <div style="color: var(--md-sys-color-on-surface-variant);">Aplicado por ${d.applied_by} (${d.applied_role})</div>
+            <strong>${d.id} • ${d.action_type}</strong> — <strong>${d.target_name}</strong>: ${d.reason}
           </div>
         `
         )
@@ -907,7 +1107,7 @@
       .map(
         (n) => `
         <div class="md3-card-filled" style="border-left: 4px solid ${n.read_status ? 'var(--md-sys-color-outline)' : 'var(--md-sys-color-primary)'};">
-          <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
             <strong>${n.title}</strong>
             <span class="md3-badge badge-neutral">${n.category}</span>
           </div>
@@ -931,11 +1131,30 @@
     if (brCodeText) brCodeText.value = data.brCode;
   }
 
-  /* ========================================================================
-     EVENT LISTENERS E INTERAÇÕES EM <= 3 CLIQUES
-     ======================================================================== */
+  function setupSegmentedButtons(attrName) {
+    document.querySelectorAll(`[${attrName}]`).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute(attrName);
+        const parentBar = btn.closest('.md3-segmented-bar');
+        if (parentBar) {
+          parentBar.querySelectorAll('.md3-seg-btn').forEach((b) => b.classList.remove('active'));
+        }
+        btn.classList.add('active');
+        const section = btn.closest('.tab-panel');
+        if (section) {
+          section.querySelectorAll('.sub-view').forEach((sv) => sv.classList.remove('active'));
+          const target = document.getElementById(targetId);
+          if (target) target.classList.add('active');
+        }
+      });
+    });
+  }
+
   function attachEvents() {
-    // Navegação entre abas principais
+    const appShell = document.getElementById('app-shell');
+    const betslipAside = document.getElementById('betslip-aside');
+
+    // Navegação Principal (Navigation Rail / Bottom Bar)
     document.querySelectorAll('.nav-rail-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetId = btn.getAttribute('data-tab');
@@ -944,30 +1163,83 @@
         btn.classList.add('active');
         const panel = document.getElementById(targetId);
         if (panel) panel.classList.add('active');
+
+        // Nas abas fora de Apostas, recolhe o bilhete lateral por padrão para dar 100% de espaço
+        if (appShell) {
+          if (targetId === 'tab-betting') {
+            appShell.classList.remove('slip-collapsed');
+          } else {
+            appShell.classList.add('slip-collapsed');
+          }
+        }
       });
     });
 
-    // Alternar Tema Claro / Escuro Material Design 3
+    // Sub-navegações Segmentadas
+    setupSegmentedButtons('data-betting-subview');
+    setupSegmentedButtons('data-leagues-subview');
+    setupSegmentedButtons('data-sec-subview');
+
+    // Busca instantânea de partidas
+    const searchInput = document.getElementById('match-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        state.searchQuery = searchInput.value;
+        renderLiveMatches();
+      });
+    }
+
+    // Alternar visibilidade do Bilhete no Desktop e Mobile
+    const toggleSlipDesktop = document.getElementById('btn-toggle-betslip-desktop');
+    if (toggleSlipDesktop && appShell) {
+      toggleSlipDesktop.addEventListener('click', () => {
+        if (window.innerWidth <= 1180 && betslipAside) {
+          betslipAside.classList.toggle('mobile-open');
+        } else {
+          appShell.classList.toggle('slip-collapsed');
+        }
+      });
+    }
+
+    const mobileFab = document.getElementById('mobile-betslip-fab');
+    if (mobileFab && betslipAside) {
+      mobileFab.addEventListener('click', () => {
+        betslipAside.classList.toggle('mobile-open');
+      });
+    }
+
+    const closeSlipMobile = document.getElementById('btn-close-betslip-mobile');
+    if (closeSlipMobile) {
+      closeSlipMobile.addEventListener('click', () => {
+        if (window.innerWidth <= 1180 && betslipAside) {
+          betslipAside.classList.remove('mobile-open');
+        } else if (appShell) {
+          appShell.classList.add('slip-collapsed');
+        }
+      });
+    }
+
+    // Tema Claro / Escuro
     const themeBtn = document.getElementById('btn-theme-toggle');
     if (themeBtn) {
       themeBtn.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
-        showSnackbar(`Tema Material Design 3 alterado para modo ${next === 'dark' ? 'Escuro' : 'Claro'}.`);
+        showSnackbar(`Tema alterado para modo ${next === 'dark' ? 'Escuro' : 'Claro'}.`);
       });
     }
 
-    // Troca de Perfil / Permissão RBAC
+    // Seletor de Perfil RBAC
     const switcher = document.getElementById('profile-switcher-select');
     if (switcher) {
       switcher.addEventListener('change', async () => {
         await loadBootstrap(switcher.value);
-        showSnackbar(`Perfil ativo alterado para ${state.currentUser.name} (${state.currentUser.role}).`);
+        showSnackbar(`Sessão alternada para ${state.currentUser.name} (${state.currentUser.role}).`);
       });
     }
 
-    // Filtro de Mercados de Apostas
+    // Filtros de Mercado e de Esporte
     document.querySelectorAll('[data-market-view]').forEach((chip) => {
       chip.addEventListener('click', () => {
         document.querySelectorAll('[data-market-view]').forEach((c) => c.classList.remove('selected'));
@@ -977,19 +1249,55 @@
       });
     });
 
-    // Filtro de Esporte no Ranking de Prognosticadores
     document.querySelectorAll('[data-tipster-sport]').forEach((chip) => {
       chip.addEventListener('click', () => {
         document.querySelectorAll('[data-tipster-sport]').forEach((c) => c.classList.remove('selected'));
         chip.classList.add('selected');
         state.tipsterSportFilter = chip.getAttribute('data-tipster-sport');
+        renderTipstersPodium();
         renderTipstersRanking();
         renderPredictionsMarketplace();
       });
     });
 
-    // Delegação global de cliques para Odds, Sync Oficial, Cashout, Convites e Compra de Previsões
+    // Abertura e fechamento de Modais (Progressive Disclosure)
+    const modalTriggers = [
+      ['btn-open-modal-tournament', 'modal-tournament-backdrop'],
+      ['btn-open-modal-team', 'modal-team-backdrop'],
+      ['btn-open-modal-federation', 'modal-federation-backdrop'],
+      ['btn-open-modal-prediction', 'modal-prediction-backdrop']
+    ];
+    modalTriggers.forEach(([btnId, modalId]) => {
+      const btn = document.getElementById(btnId);
+      const modal = document.getElementById(modalId);
+      if (btn && modal) {
+        btn.addEventListener('click', () => modal.classList.add('open'));
+      }
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.getAttribute('data-close-modal'));
+        if (target) target.classList.remove('open');
+      });
+    });
+
+    // Delegação global de cliques
     document.body.addEventListener('click', async (ev) => {
+      // 1. Expandir/Recolher Gaveta de Mercados Extras por Partida
+      const toggleMarketsBtn = ev.target.closest('[data-toggle-markets]');
+      if (toggleMarketsBtn) {
+        const mId = toggleMarketsBtn.getAttribute('data-toggle-markets');
+        if (state.expandedMatchIds.has(mId)) {
+          state.expandedMatchIds.delete(mId);
+        } else {
+          state.expandedMatchIds.add(mId);
+        }
+        renderLiveMatches();
+        return;
+      }
+
+      // 2. Selecionar Cotação (@Odd)
       const oddBtn = ev.target.closest('[data-bet-match]');
       if (oddBtn) {
         const matchId = oddBtn.getAttribute('data-bet-match');
@@ -1013,6 +1321,24 @@
         return;
       }
 
+      // 3. Copiar Entrada de um Prognosticador direto para o Bilhete
+      const copyPickBtn = ev.target.closest('[data-copy-pick-match]');
+      if (copyPickBtn) {
+        const matchId = copyPickBtn.getAttribute('data-copy-pick-match');
+        const matchLabel = copyPickBtn.getAttribute('data-copy-pick-label');
+        const market = copyPickBtn.getAttribute('data-copy-pick-market');
+        const selection = copyPickBtn.getAttribute('data-copy-pick-selection');
+        const odds = Number(copyPickBtn.getAttribute('data-copy-pick-odds'));
+
+        state.betSlip = [{ matchId, matchLabel, market, selection, odds }];
+        renderBetSlip();
+        if (appShell) appShell.classList.remove('slip-collapsed');
+        if (window.innerWidth <= 1180 && betslipAside) betslipAside.classList.add('mobile-open');
+        showSnackbar(`Entrada "${selection} (@${odds.toFixed(2)})" adicionada ao seu Bilhete!`);
+        return;
+      }
+
+      // 4. Remover item do Bilhete
       const removeSlipBtn = ev.target.closest('[data-remove-slip]');
       if (removeSlipBtn) {
         const idx = Number(removeSlipBtn.getAttribute('data-remove-slip'));
@@ -1022,6 +1348,7 @@
         return;
       }
 
+      // 5. Simular Gol no Feed Oficial
       const syncBtn = ev.target.closest('[data-sync-match]');
       if (syncBtn) {
         const matchId = syncBtn.getAttribute('data-sync-match');
@@ -1038,6 +1365,7 @@
         return;
       }
 
+      // 6. Cashout Instantâneo
       const cashoutBtn = ev.target.closest('[data-cashout-bet]');
       if (cashoutBtn) {
         const betId = cashoutBtn.getAttribute('data-cashout-bet');
@@ -1051,6 +1379,7 @@
         return;
       }
 
+      // 7. Convidar Clube & Inscrição PIX
       const inviteBtn = ev.target.closest('[data-invite-trn]');
       if (inviteBtn) {
         const trnId = inviteBtn.getAttribute('data-invite-trn');
@@ -1071,6 +1400,7 @@
         return;
       }
 
+      // 8. Comprar e Desbloquear Previsão Esportiva
       const buyPredBtn = ev.target.closest('[data-buy-prediction]');
       if (buyPredBtn) {
         const predId = buyPredBtn.getAttribute('data-buy-prediction');
@@ -1087,6 +1417,7 @@
         return;
       }
 
+      // 9. Resolver Chamado de Suporte
       const resolveTicketBtn = ev.target.closest('[data-resolve-ticket]');
       if (resolveTicketBtn) {
         const ticketId = resolveTicketBtn.getAttribute('data-resolve-ticket');
@@ -1105,7 +1436,7 @@
       }
     });
 
-    // Botões de Stake Rápida no Bilhete
+    // Botões de Stake Rápida
     document.querySelectorAll('.quick-stake-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const stakeEl = document.getElementById('betslip-stake-input');
@@ -1121,7 +1452,7 @@
       stakeInput.addEventListener('input', renderBetSlip);
     }
 
-    // Confirmar Aposta (Clique Final do fluxo <= 3 cliques)
+    // Confirmar Aposta (<= 3 cliques)
     const placeBetBtn = document.getElementById('btn-place-bet-now');
     if (placeBetBtn) {
       placeBetBtn.addEventListener('click', async () => {
@@ -1136,6 +1467,7 @@
               paymentMethod
             })
           });
+          if (betslipAside) betslipAside.classList.remove('mobile-open');
           await loadBootstrap(state.currentUser?.id);
           showSnackbar(res.message);
         } catch (err) {
@@ -1144,13 +1476,13 @@
       });
     }
 
-    // Cálculo dinâmico de premiação ao alterar vagas ou valor de inscrição
+    // Cálculo dinâmico de premiação
     ['trn-max-teams', 'trn-entry-fee'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', renderPrizePreview);
     });
 
-    // Criar Campeonato
+    // Submissão dos Modais
     const formTrn = document.getElementById('form-create-tournament');
     if (formTrn) {
       formTrn.addEventListener('submit', async (ev) => {
@@ -1168,6 +1500,7 @@
               inviteEmails: document.getElementById('trn-invite-emails').value
             })
           });
+          document.getElementById('modal-tournament-backdrop')?.classList.remove('open');
           await loadBootstrap(state.currentUser?.id);
           showSnackbar(res.message);
         } catch (err) {
@@ -1176,7 +1509,6 @@
       });
     }
 
-    // Cadastrar Federação
     const formFed = document.getElementById('form-create-federation');
     if (formFed) {
       formFed.addEventListener('submit', async (ev) => {
@@ -1191,6 +1523,7 @@
             })
           });
           formFed.reset();
+          document.getElementById('modal-federation-backdrop')?.classList.remove('open');
           await loadBootstrap(state.currentUser?.id);
           showSnackbar(res.message);
         } catch (err) {
@@ -1199,7 +1532,6 @@
       });
     }
 
-    // Cadastrar Time
     const formTeam = document.getElementById('form-create-team');
     if (formTeam) {
       formTeam.addEventListener('submit', async (ev) => {
@@ -1221,6 +1553,7 @@
             })
           });
           formTeam.reset();
+          document.getElementById('modal-team-backdrop')?.classList.remove('open');
           await loadBootstrap(state.currentUser?.id);
           showSnackbar(res.message);
         } catch (err) {
@@ -1229,7 +1562,6 @@
       });
     }
 
-    // Publicar Previsão Esportiva
     const formPred = document.getElementById('form-publish-prediction');
     if (formPred) {
       formPred.addEventListener('submit', async (ev) => {
@@ -1249,6 +1581,7 @@
               analysisFull: document.getElementById('pred-full-textarea').value
             })
           });
+          document.getElementById('modal-prediction-backdrop')?.classList.remove('open');
           await loadBootstrap(state.currentUser?.id);
           showSnackbar(res.message);
         } catch (err) {
@@ -1257,7 +1590,7 @@
       });
     }
 
-    // Submeter Verificação KYC
+    // KYC, MFA, Jogo Responsável e LGPD
     const formKyc = document.getElementById('form-kyc-verification');
     if (formKyc) {
       formKyc.addEventListener('submit', async (ev) => {
@@ -1280,7 +1613,6 @@
       });
     }
 
-    // Copiar código TOTP atual e validar MFA
     const copyTotpBtn = document.getElementById('btn-copy-totp-code');
     if (copyTotpBtn) {
       copyTotpBtn.addEventListener('click', () => {
@@ -1310,7 +1642,6 @@
       });
     }
 
-    // Jogo Responsável e Portabilidade LGPD
     const formRg = document.getElementById('form-responsible-gaming');
     if (formRg) {
       formRg.addEventListener('submit', async (ev) => {
@@ -1338,7 +1669,7 @@
           const data = await apiRequest('/api/security/lgpd/export');
           const pre = document.getElementById('lgpd-export-preview');
           if (pre) {
-            pre.style.display = 'block';
+            pre.style.display = pre.style.display === 'block' ? 'none' : 'block';
             pre.textContent = JSON.stringify(data, null, 2);
           }
           showSnackbar('Relatório de Portabilidade LGPD (Art. 18) descriptografado pelo titular.');
@@ -1348,7 +1679,6 @@
       });
     }
 
-    // Preferências de Notificação
     const formNotifPrefs = document.getElementById('form-notif-preferences');
     if (formNotifPrefs) {
       formNotifPrefs.addEventListener('submit', async (ev) => {
@@ -1377,7 +1707,7 @@
       });
     }
 
-    // Admin: Reconciliação Bancária SPI/PIX e Rotação de Chave HSM
+    // Admin RBAC
     const btnReconcile = document.getElementById('btn-admin-reconcile');
     if (btnReconcile) {
       btnReconcile.addEventListener('click', async () => {
@@ -1427,17 +1757,22 @@
 
     // Modal PIX Instantâneo
     const pixBackdrop = document.getElementById('modal-pix-backdrop');
-    const openPixBtn = document.getElementById('btn-open-pix-modal');
+    const openPixBtns = [
+      document.getElementById('btn-open-pix-modal'),
+      document.getElementById('btn-wallet-hero-deposit')
+    ];
     const closePixBtn = document.getElementById('btn-close-pix-modal');
     const genPixBtn = document.getElementById('btn-generate-pix-code');
     const confirmPixBtn = document.getElementById('btn-confirm-pix-deposit');
 
-    if (openPixBtn && pixBackdrop) {
-      openPixBtn.addEventListener('click', async () => {
-        pixBackdrop.classList.add('open');
-        await refreshPixModalQr();
-      });
-    }
+    openPixBtns.forEach((b) => {
+      if (b && pixBackdrop) {
+        b.addEventListener('click', async () => {
+          pixBackdrop.classList.add('open');
+          await refreshPixModalQr();
+        });
+      }
+    });
     if (closePixBtn && pixBackdrop) {
       closePixBtn.addEventListener('click', () => pixBackdrop.classList.remove('open'));
     }
