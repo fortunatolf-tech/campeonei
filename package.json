@@ -26,6 +26,6 @@
   "author": "Campeonei Tecnologia Esportiva e Pagamentos S.A.",
   "license": "PROPRIETARY",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=18.0.0"
   }
 }
