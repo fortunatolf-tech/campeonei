@@ -2,8 +2,15 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
 const { hsm } = require('../security/hsmCrypto');
+const { SqliteCompatDatabase } = require('./sqliteCompat');
+
+let NativeDatabaseSync = null;
+try {
+  NativeDatabaseSync = require('node:sqlite').DatabaseSync;
+} catch {
+  NativeDatabaseSync = null;
+}
 
 let dbInstance = null;
 
@@ -20,10 +27,15 @@ function createDatabase(dbPath = null) {
     }
   }
 
-  const db = new DatabaseSync(resolvedPath);
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA synchronous = NORMAL;');
-  db.exec('PRAGMA foreign_keys = ON;');
+  let db;
+  if (NativeDatabaseSync && process.env.CAMPEONEI_FORCE_COMPAT_DB !== '1') {
+    db = new NativeDatabaseSync(resolvedPath);
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA synchronous = NORMAL;');
+    db.exec('PRAGMA foreign_keys = ON;');
+  } else {
+    db = new SqliteCompatDatabase(resolvedPath);
+  }
 
   initSchema(db);
   return db;
