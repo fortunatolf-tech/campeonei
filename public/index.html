@@ -10,13 +10,19 @@
   />
   <meta name="theme-color" content="#006C4C" />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="/css/md3-design-system.css" />
 </head>
 <body>
-  <div class="md3-app-shell">
-    <!-- M3 Navigation Rail (Desktop) / Bottom Navigation Bar (Mobile) -->
+  <div id="app-shell" class="md3-app-shell">
+    <!-- M3 Navigation Rail (Desktop) / Bottom Navigation Bar (Mobile Thumb-Zone) -->
     <nav class="md3-nav-rail" aria-label="Navegação Principal Campeonei">
-      <div class="brand-crest" title="Campeonei — campeonei.com.br">C</div>
+      <div class="brand-crest" id="brand-home-trigger" title="Campeonei — campeonei.com.br">C</div>
 
       <button
         id="nav-btn-betting"
@@ -37,7 +43,7 @@
         aria-label="Federações, Ligas e Campeonatos"
       >
         <span class="nav-pill" aria-hidden="true">🏆</span>
-        <span>Campeonatos</span>
+        <span>Ligas</span>
       </button>
 
       <button
@@ -48,7 +54,7 @@
         aria-label="Mercado de Previsões Esportivas"
       >
         <span class="nav-pill" aria-hidden="true">📈</span>
-        <span>Previsões</span>
+        <span>Tips</span>
       </button>
 
       <button
@@ -58,8 +64,8 @@
         data-tab="tab-security"
         aria-label="Carteira PIX, KYC, MFA e LGPD"
       >
-        <span class="nav-pill" aria-hidden="true">🔐</span>
-        <span>PIX &amp; KYC</span>
+        <span class="nav-pill" aria-hidden="true">💳</span>
+        <span>Carteira</span>
       </button>
 
       <button
@@ -82,54 +88,64 @@
           <h1>Campeonei</h1>
           <span class="domain-badge">
             <span class="live-dot" aria-hidden="true"></span>
-            campeonei.com.br • M3
+            <span id="metric-odds-latency" class="tabular-nums">12 ms • Ao Vivo</span>
           </span>
           <span id="header-kyc-badge" class="md3-badge badge-success">KYC VERIFICADO</span>
         </div>
 
         <div class="top-bar-actions">
-          <!-- Seletor de Perfil / Permissão RBAC para Testes -->
+          <!-- Seletor Rápido de Perfil RBAC -->
           <div class="md3-field" style="flex-direction: row; align-items: center; gap: 6px;">
             <label for="profile-switcher-select" style="font-size: 0.75rem;">Perfil:</label>
             <select
               id="profile-switcher-select"
               class="md3-select"
-              style="height: 34px; font-size: 0.78rem; padding: 0 10px;"
+              style="min-height: 36px; font-size: 0.78rem; padding: 0 10px;"
               aria-label="Alternar perfil de usuário ou administrador"
             ></select>
           </div>
 
-          <!-- Carteira & Depósito PIX 1-Clique -->
+          <!-- Carteira Digital & Depósito PIX 1-Clique -->
           <div class="wallet-surface-chip" aria-live="polite">
-            <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Saldo:</span>
+            <span style="font-size: 0.74rem; color: var(--md-sys-color-on-surface-variant);">Saldo:</span>
             <span id="top-wallet-balance" class="wallet-amount tabular-nums">R$ 14.850,00</span>
             <button
               id="btn-open-pix-modal"
               type="button"
               class="md3-btn md3-btn-filled md3-btn-sm"
             >
-              + PIX Instantâneo
+              + Depositar PIX
             </button>
           </div>
 
-          <!-- Notificações em Tempo Real -->
+          <!-- Botão para Abrir/Ocultar Bilhete em qualquer aba -->
+          <button
+            id="btn-toggle-betslip-desktop"
+            type="button"
+            class="md3-btn md3-btn-tonal md3-btn-sm"
+            aria-label="Alternar visibilidade do bilhete de apostas"
+          >
+            🎟️ Bilhete (<span id="top-slip-count" class="tabular-nums">1</span>)
+          </button>
+
+          <!-- Central de Notificações -->
           <button
             id="btn-open-notifications"
             type="button"
-            class="md3-btn md3-btn-tonal md3-btn-sm"
+            class="md3-btn md3-btn-outlined md3-btn-sm"
             aria-label="Abrir central de notificações em tempo real"
           >
             🔔 <span id="notif-unread-count" class="tabular-nums">4</span>
           </button>
 
-          <!-- Alternar Tema Claro / Escuro M3 -->
+          <!-- Tema Claro / Escuro -->
           <button
             id="btn-theme-toggle"
             type="button"
             class="md3-btn md3-btn-outlined md3-btn-sm"
             aria-label="Alternar tema claro ou escuro Material Design 3"
           >
-            ☀️ / 🌙
+            ☀️/🌙
           </button>
         </div>
       </header>
@@ -137,493 +153,283 @@
       <!-- Main Content Container -->
       <main class="md3-content-container">
         <!-- =================================================================
-             MÓDULO 2: APOSTAS ESPORTIVAS AO VIVO & TRANSAÇÕES PIX
+             ABA 1: APOSTAS ESPORTIVAS AO VIVO & MATCH CENTER
              ================================================================= -->
         <section id="tab-betting" class="tab-panel active" aria-labelledby="heading-betting">
+          <!-- Hero Match Center Ao Vivo -->
+          <div id="featured-match-hero" class="live-hero-banner" aria-live="polite"></div>
+
+          <!-- Barra de Sub-Navegação, Busca e Filtros Rápidos -->
           <div class="md3-section-header">
-            <div>
-              <h2 id="heading-betting">Apostas Esportivas em Tempo Real &amp; Liquidação PIX</h2>
-              <p>
-                Cotações ao vivo de baixa latência (1X2, Handicap Asiático, Over/Under Gols e Ambas Marcam) com proteção anti-manipulação por Machine Learning e conclusão em até 3 cliques.
-              </p>
+            <div class="md3-segmented-bar" role="tablist" aria-label="Visão de apostas">
+              <button
+                type="button"
+                class="md3-seg-btn active"
+                data-betting-subview="subview-live-matches"
+              >
+                ⚡ Partidas &amp; Cotações Ao Vivo
+              </button>
+              <button
+                type="button"
+                class="md3-seg-btn"
+                data-betting-subview="subview-my-bets"
+              >
+                🎟️ Meus Bilhetes &amp; Cashout (<span id="my-bets-count-pill" class="tabular-nums">1</span>)
+              </button>
             </div>
-            <div class="md3-chip-group" role="group" aria-label="Filtro de mercados de apostas">
-              <button type="button" class="md3-chip selected" data-market-view="ALL" id="chip-market-all">
-                Todos os Mercados
-              </button>
-              <button type="button" class="md3-chip" data-market-view="1X2" id="chip-market-1x2">
-                Resultado Final (1X2)
-              </button>
-              <button type="button" class="md3-chip" data-market-view="HANDICAP" id="chip-market-handicap">
-                Handicap Asiático
-              </button>
-              <button type="button" class="md3-chip" data-market-view="GOALS" id="chip-market-goals">
-                Número de Gols (Over/Under)
-              </button>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+              <input
+                id="match-search-input"
+                type="search"
+                class="md3-input"
+                style="min-height: 38px; width: 220px; font-size: 0.82rem;"
+                placeholder="🔍 Buscar time ou liga..."
+                aria-label="Buscar partida ou time"
+              />
+              <div class="md3-chip-group" role="group" aria-label="Filtro de mercados de apostas">
+                <button type="button" class="md3-chip selected" data-market-view="ALL" id="chip-market-all">
+                  Principais (1X2) + Gaveta
+                </button>
+                <button type="button" class="md3-chip" data-market-view="HANDICAP" id="chip-market-handicap">
+                  Handicap Asiático
+                </button>
+                <button type="button" class="md3-chip" data-market-view="GOALS" id="chip-market-goals">
+                  Gols Over/Under &amp; Ambas
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Faixa de Telemetria de Segurança e Conformidade -->
-          <div class="md3-grid-4">
-            <div class="md3-card-filled">
-              <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Latência do Motor de Odds</span>
-              <div style="font-size: 1.25rem; font-weight: 800; color: var(--md-sys-color-primary);" class="tabular-nums" id="metric-odds-latency">
-                14 ms • SSE Ativo
-              </div>
-              <span style="font-size: 0.75rem;">Sincronizado com Feed Oficial CBF / FIBA</span>
-            </div>
-            <div class="md3-card-filled">
-              <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Liquidação PIX Banco Central</span>
-              <div style="font-size: 1.25rem; font-weight: 800;" class="tabular-nums">
-                Instantânea (&lt; 1.2s)
-              </div>
-              <span style="font-size: 0.75rem;">Padrão EMVCo BRCode CRC16 + SPI</span>
-            </div>
-            <div class="md3-card-filled">
-              <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Integridade &amp; Anti-Fraude ML</span>
-              <div style="font-size: 1.25rem; font-weight: 800; color: var(--md-sys-color-primary);">
-                IForest v3.4 Ativo
-              </div>
-              <span style="font-size: 0.75rem;">Monitoramento de Z-Score, Odds Drift e Lei 14.790</span>
-            </div>
-            <div class="md3-card-filled">
-              <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Criptografia de Transações</span>
-              <div style="font-size: 1.25rem; font-weight: 800;">
-                AES-256-GCM HSM
-              </div>
-              <span style="font-size: 0.75rem;">Ledger Imutável SHA-256 Auditável</span>
-            </div>
+          <!-- Sub-view 1.1: Grade de Partidas Ao Vivo -->
+          <div id="subview-live-matches" class="sub-view active">
+            <h2 id="heading-betting" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0);">
+              Apostas Esportivas em Tempo Real
+            </h2>
+            <div id="live-matches-container" class="md3-grid-2" aria-live="polite"></div>
           </div>
 
-          <!-- Grade de Partidas Ao Vivo -->
-          <div id="live-matches-container" class="md3-grid-2" aria-live="polite"></div>
-
-          <!-- Minhas Apostas Abertas e Liquidadas (com Cashout Instantâneo) -->
-          <div class="md3-card">
-            <div class="md3-section-header">
-              <div>
-                <h3 style="margin: 0; font-size: 1.1rem;">Meus Bilhetes Registrados &amp; Cashout Ao Vivo</h3>
-                <p style="margin: 2px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                  Todas as apostas possuem hash de auditoria no Ledger Financeiro Imutável e avaliação de risco ML.
-                </p>
+          <!-- Sub-view 1.2: Meus Bilhetes Registrados & Cashout -->
+          <div id="subview-my-bets" class="sub-view">
+            <div class="md3-card">
+              <div class="md3-section-header">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.15rem;">Meus Bilhetes Registrados &amp; Cashout Instantâneo</h3>
+                  <p style="margin: 2px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
+                    Liquidação via PIX com auditoria SHA-256 e proteção anti-manipulação por Machine Learning.
+                  </p>
+                </div>
               </div>
+              <div id="user-bets-list" class="md3-table-wrap"></div>
             </div>
-            <div id="user-bets-list" class="md3-table-wrap"></div>
           </div>
         </section>
 
         <!-- =================================================================
-             MÓDULO 1: FEDERAÇÕES, TIMES, LIGAS & CAMPEONATOS
+             ABA 2: FEDERAÇÕES, TIMES, LIGAS & CAMPEONATOS (PROGRESSIVE DISCLOSURE)
              ================================================================= -->
         <section id="tab-leagues" class="tab-panel" aria-labelledby="heading-leagues">
           <div class="md3-section-header">
             <div>
-              <h2 id="heading-leagues">Gestão de Federações, Times, Ligas e Campeonatos</h2>
+              <h2 id="heading-leagues">Central de Competições, Clubes e Federações</h2>
               <p>
-                Crie competições em Pontos Corridos, Mata-Mata ou Grupos, configure critérios de desempate, calcule premiações automaticamente e sincronize súmulas com fontes oficiais.
+                Acompanhe classificações em tempo real, elencos completos e premiações automáticas em custódia PIX.
               </p>
             </div>
-          </div>
-
-          <!-- Criador Rápido de Campeonato + Calculadora Automática de Premiação -->
-          <div class="md3-grid-2">
-            <form id="form-create-tournament" class="md3-card">
-              <h3 style="margin: 0; font-size: 1.1rem;">1. Criar Novo Campeonato Personalizado (≤ 3 cliques)</h3>
-              <div class="md3-grid-2">
-                <div class="md3-field">
-                  <label for="trn-name-input">Nome da Competição</label>
-                  <input
-                    id="trn-name-input"
-                    type="text"
-                    class="md3-input"
-                    value="Taça Campeonei Ouro 2026"
-                    required
-                  />
-                </div>
-                <div class="md3-field">
-                  <label for="trn-fed-select">Federação Homologadora</label>
-                  <select id="trn-fed-select" class="md3-select"></select>
-                </div>
-              </div>
-
-              <div class="md3-grid-3">
-                <div class="md3-field">
-                  <label for="trn-format-select">Formato do Torneio</label>
-                  <select id="trn-format-select" class="md3-select">
-                    <option value="PONTOS_CORRIDOS">Pontos Corridos (Turno e Returno)</option>
-                    <option value="MATA_MATA">Eliminatória Simples / Mata-Mata</option>
-                    <option value="GRUPOS_MATA_MATA">Fase de Grupos + Playoffs</option>
-                  </select>
-                </div>
-                <div class="md3-field">
-                  <label for="trn-max-teams">Limite de Inscrições (Times)</label>
-                  <input
-                    id="trn-max-teams"
-                    type="number"
-                    class="md3-input tabular-nums"
-                    min="4"
-                    max="64"
-                    value="16"
-                    required
-                  />
-                </div>
-                <div class="md3-field">
-                  <label for="trn-entry-fee">Valor de Inscrição (R$)</label>
-                  <input
-                    id="trn-entry-fee"
-                    type="number"
-                    class="md3-input tabular-nums"
-                    min="0"
-                    step="50"
-                    value="2000"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="md3-grid-2">
-                <div class="md3-field">
-                  <label for="trn-tiebreaker-select">Critérios de Desempate</label>
-                  <select id="trn-tiebreaker-select" class="md3-select">
-                    <option value="WINS,GOAL_DIFF,GOALS_FOR,HEAD_TO_HEAD,FAIR_PLAY">
-                      Padrão CBF: Vitórias &gt; Saldo &gt; Gols Pró &gt; Confronto Direto &gt; Cartões
-                    </option>
-                    <option value="GOAL_DIFF,GOALS_FOR,WINS,HEAD_TO_HEAD">
-                      Padrão FIFA/UEFA: Saldo de Gols &gt; Gols Pró &gt; Vitórias
-                    </option>
-                    <option value="HEAD_TO_HEAD,WINS,GOAL_DIFF">
-                      Confronto Direto &gt; Vitórias &gt; Saldo de Gols
-                    </option>
-                  </select>
-                </div>
-                <div class="md3-field">
-                  <label for="trn-invite-emails">Convite Automatizado (E-mails separados por vírgula)</label>
-                  <input
-                    id="trn-invite-emails"
-                    type="text"
-                    class="md3-input"
-                    value="diretoria@palmeiras.com.br, futebol@flamengo.com.br"
-                  />
-                </div>
-              </div>
-
-              <!-- Painel de Cálculo Automático de Premiação -->
-              <div id="prize-calc-preview" class="md3-card-filled" aria-live="polite"></div>
-
-              <button id="btn-submit-tournament" type="submit" class="md3-btn md3-btn-filled">
-                🏆 Criar Campeonato &amp; Disparar Convites Automatizados
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" id="btn-open-modal-tournament" class="md3-btn md3-btn-filled">
+                + Criar Campeonato
               </button>
-            </form>
-
-            <!-- Cadastro de Federações e Times com Elenco -->
-            <div style="display: flex; flex-direction: column; gap: 18px;">
-              <form id="form-create-federation" class="md3-card">
-                <h3 style="margin: 0; font-size: 1.05rem;">2. Cadastrar Federação Esportiva</h3>
-                <div class="md3-grid-3">
-                  <div class="md3-field">
-                    <label for="fed-acronym-input">Sigla</label>
-                    <input id="fed-acronym-input" type="text" class="md3-input" placeholder="Ex: FERJ" required />
-                  </div>
-                  <div class="md3-field">
-                    <label for="fed-name-input">Nome Oficial</label>
-                    <input id="fed-name-input" type="text" class="md3-input" placeholder="Federação de Futebol do RJ" required />
-                  </div>
-                  <div class="md3-field">
-                    <label for="fed-sport-select">Modalidade</label>
-                    <select id="fed-sport-select" class="md3-select">
-                      <option value="Futebol">Futebol</option>
-                      <option value="Basquete">Basquete</option>
-                      <option value="Vôlei">Vôlei</option>
-                      <option value="eSports">eSports</option>
-                    </select>
-                  </div>
-                </div>
-                <button id="btn-submit-federation" type="submit" class="md3-btn md3-btn-tonal">
-                  + Homologar Federação Esportiva
-                </button>
-              </form>
-
-              <form id="form-create-team" class="md3-card">
-                <h3 style="margin: 0; font-size: 1.05rem;">3. Registrar Time com Elenco, Estatísticas e Histórico</h3>
-                <div class="md3-grid-3">
-                  <div class="md3-field">
-                    <label for="team-name-input">Nome do Clube</label>
-                    <input id="team-name-input" type="text" class="md3-input" placeholder="Ex: Cruzeiro EC" required />
-                  </div>
-                  <div class="md3-field">
-                    <label for="team-short-input">Sigla (3 letras)</label>
-                    <input id="team-short-input" type="text" class="md3-input" placeholder="CRU" maxlength="4" required />
-                  </div>
-                  <div class="md3-field">
-                    <label for="team-stadium-input">Estádio / Arena</label>
-                    <input id="team-stadium-input" type="text" class="md3-input" placeholder="Mineirão" required />
-                  </div>
-                </div>
-                <div class="md3-grid-2">
-                  <div class="md3-field">
-                    <label for="team-coach-input">Treinador Principal</label>
-                    <input id="team-coach-input" type="text" class="md3-input" placeholder="Fernando Seabra" />
-                  </div>
-                  <div class="md3-field">
-                    <label for="team-star-player-input">Jogador Destaque (Camisa 10)</label>
-                    <input id="team-star-player-input" type="text" class="md3-input" placeholder="Matheus Pereira (Meia - Overall 87)" />
-                  </div>
-                </div>
-                <button id="btn-submit-team" type="submit" class="md3-btn md3-btn-tonal">
-                  + Cadastrar Time Completo na Federação
-                </button>
-              </form>
+              <button type="button" id="btn-open-modal-team" class="md3-btn md3-btn-tonal">
+                + Cadastrar Clube
+              </button>
+              <button type="button" id="btn-open-modal-federation" class="md3-btn md3-btn-outlined">
+                + Nova Federação
+              </button>
             </div>
           </div>
 
-          <!-- Lista de Campeonatos Ativos, Classificação em Tempo Real e Convites -->
-          <div id="tournaments-list-container" style="display: flex; flex-direction: column; gap: 18px;"></div>
+          <!-- Sub-navegação Segmentada (Evita sobrecarga cognitiva) -->
+          <div class="md3-segmented-bar" role="tablist" aria-label="Sub-navegação de ligas">
+            <button type="button" class="md3-seg-btn active" data-leagues-subview="subview-tournaments">
+              🏆 Campeonatos &amp; Classificação
+            </button>
+            <button type="button" class="md3-seg-btn" data-leagues-subview="subview-teams">
+              🛡️ Clubes, Elencos &amp; Estatísticas
+            </button>
+            <button type="button" class="md3-seg-btn" data-leagues-subview="subview-federations">
+              🏛️ Federações Homologadas
+            </button>
+          </div>
 
-          <!-- Federações e Times Registrados com Elenco Detalhado -->
-          <div class="md3-card">
-            <h3 style="margin: 0; font-size: 1.1rem;">Clubes Registrados, Elencos, Estatísticas e Histórico</h3>
+          <!-- Sub-view 2.1: Campeonatos & Classificação -->
+          <div id="subview-tournaments" class="sub-view active">
+            <div id="tournaments-list-container" style="display: flex; flex-direction: column; gap: 18px;"></div>
+          </div>
+
+          <!-- Sub-view 2.2: Clubes & Elencos -->
+          <div id="subview-teams" class="sub-view">
             <div id="teams-roster-grid" class="md3-grid-2"></div>
+          </div>
+
+          <!-- Sub-view 2.3: Federações -->
+          <div id="subview-federations" class="sub-view">
+            <div id="federations-cards-grid" class="md3-grid-2"></div>
           </div>
         </section>
 
         <!-- =================================================================
-             MÓDULO 3: MERCADO DE PREVISÕES ESPORTIVAS (TIPSTER MARKETPLACE)
+             ABA 3: MERCADO DE PREVISÕES ESPORTIVAS (TIPSTER MARKETPLACE)
              ================================================================= -->
         <section id="tab-predictions" class="tab-panel" aria-labelledby="heading-predictions">
           <div class="md3-section-header">
             <div>
-              <h2 id="heading-predictions">Mercado Transparente de Previsões Esportivas</h2>
+              <h2 id="heading-predictions">Mercado de Previsões &amp; Ranking de Especialistas</h2>
               <p>
-                Compre e venda prognósticos esportivos com valores definidos pelos próprios analistas, histórico público imutável de Greens/Reds e ranking auditado por Taxa de Acerto, ROI e Consistência.
+                Métricas 100% auditadas (Taxa de Acerto, ROI e Consistência), histórico imutável de Greens/Reds e cópia de entrada em 1 clique para o seu bilhete.
               </p>
             </div>
-            <div class="md3-chip-group" role="group" aria-label="Filtrar prognosticadores por esporte">
-              <button type="button" class="md3-chip selected" data-tipster-sport="ALL" id="chip-sport-all">
-                Todos os Esportes
-              </button>
-              <button type="button" class="md3-chip" data-tipster-sport="Futebol" id="chip-sport-futebol">
-                Futebol
-              </button>
-              <button type="button" class="md3-chip" data-tipster-sport="Basquete" id="chip-sport-basquete">
-                Basquete
-              </button>
-              <button type="button" class="md3-chip" data-tipster-sport="Vôlei" id="chip-sport-volei">
-                Vôlei
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <div class="md3-chip-group" role="group" aria-label="Filtrar prognosticadores por esporte">
+                <button type="button" class="md3-chip selected" data-tipster-sport="ALL" id="chip-sport-all">
+                  Todos
+                </button>
+                <button type="button" class="md3-chip" data-tipster-sport="Futebol" id="chip-sport-futebol">
+                  ⚽ Futebol
+                </button>
+                <button type="button" class="md3-chip" data-tipster-sport="Basquete" id="chip-sport-basquete">
+                  🏀 Basquete
+                </button>
+                <button type="button" class="md3-chip" data-tipster-sport="Vôlei" id="chip-sport-volei">
+                  🏐 Vôlei
+                </button>
+              </div>
+              <button type="button" id="btn-open-modal-prediction" class="md3-btn md3-btn-filled">
+                + Publicar Previsão
               </button>
             </div>
           </div>
 
-          <!-- Classificação Atualizada dos Melhores Prognosticadores -->
+          <!-- Pódio Visual dos Melhores Prognosticadores -->
+          <div id="tipsters-podium-grid" class="md3-grid-4"></div>
+
+          <!-- Lista de Prognósticos (Compra PIX + Botão Copiar para o Bilhete) -->
+          <div id="predictions-cards-container" class="md3-grid-2"></div>
+
+          <!-- Tabela Completa Auditável de Desempenho -->
           <div class="md3-card">
-            <h3 style="margin: 0; font-size: 1.1rem;">Ranking Auditado de Prognosticadores (Taxa de Acerto, ROI e Consistência)</h3>
+            <h3 style="margin: 0; font-size: 1.08rem;">Tabela Completa de Desempenho Auditado (ROI, Win Rate &amp; Sequência)</h3>
             <div id="tipsters-ranking-table" class="md3-table-wrap"></div>
-          </div>
-
-          <!-- Previsões Disponíveis para Compra / Desbloqueio & Formulário de Publicação -->
-          <div class="md3-grid-2">
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-              <h3 style="margin: 0; font-size: 1.1rem;">Prognósticos Disponíveis &amp; Histórico Público de Acertos/Erros</h3>
-              <div id="predictions-cards-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
-            </div>
-
-            <!-- Publicar Nova Previsão no Mercado -->
-            <form id="form-publish-prediction" class="md3-card" style="align-self: start;">
-              <h3 style="margin: 0; font-size: 1.1rem;">Publicar e Vender Previsão Esportiva</h3>
-              <p style="margin: 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                Defina seu próprio valor. O relatório completo fica criptografado no HSM (AES-256-GCM) até a compra e você recebe 85% automaticamente em cada venda.
-              </p>
-              <div class="md3-grid-2">
-                <div class="md3-field">
-                  <label for="pred-sport-select">Categoria de Esporte</label>
-                  <select id="pred-sport-select" class="md3-select">
-                    <option value="Futebol">Futebol</option>
-                    <option value="Basquete">Basquete</option>
-                    <option value="Vôlei">Vôlei</option>
-                  </select>
-                </div>
-                <div class="md3-field">
-                  <label for="pred-match-input">Partida Analisada</label>
-                  <input
-                    id="pred-match-input"
-                    type="text"
-                    class="md3-input"
-                    value="SE Palmeiras vs CR Flamengo (Série A)"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="md3-grid-2">
-                <div class="md3-field">
-                  <label for="pred-selection-input">Entrada Recomendada</label>
-                  <input
-                    id="pred-selection-input"
-                    type="text"
-                    class="md3-input"
-                    placeholder="Ex: Ambas Marcam + Mais de 2.5 Gols"
-                    required
-                  />
-                </div>
-                <div class="md3-field">
-                  <label for="pred-odds-input">Cotação Justa (@Odd)</label>
-                  <input
-                    id="pred-odds-input"
-                    type="number"
-                    step="0.01"
-                    min="1.10"
-                    class="md3-input tabular-nums"
-                    value="2.05"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="md3-grid-3">
-                <div class="md3-field">
-                  <label for="pred-price-input">Preço da Previsão (R$)</label>
-                  <input
-                    id="pred-price-input"
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    class="md3-input tabular-nums"
-                    value="24.90"
-                    required
-                  />
-                </div>
-                <div class="md3-field">
-                  <label for="pred-units-input">Stake (Unidades)</label>
-                  <input
-                    id="pred-units-input"
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    max="10"
-                    class="md3-input tabular-nums"
-                    value="2.5"
-                    required
-                  />
-                </div>
-                <div class="md3-field">
-                  <label for="pred-confidence-input">Confiança (%)</label>
-                  <input
-                    id="pred-confidence-input"
-                    type="number"
-                    min="50"
-                    max="99"
-                    class="md3-input tabular-nums"
-                    value="90"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="md3-field">
-                <label for="pred-preview-input">Resumo Público (Visível antes da compra)</label>
-                <input
-                  id="pred-preview-input"
-                  type="text"
-                  class="md3-input"
-                  value="Análise tática baseada em Expected Goals (xG) e mapa de pressão no último terço."
-                  required
-                />
-              </div>
-
-              <div class="md3-field">
-                <label for="pred-full-textarea">Relatório Tático Completo (Protegido por Criptografia HSM até a Compra)</label>
-                <textarea
-                  id="pred-full-textarea"
-                  class="md3-textarea"
-                  required
-                >MODELO PROPRIETÁRIO +EV: Ambas as equipes criaram média de 2.4 grandes chances por tempo. Valor esperado positivo de +11.8% na linha asiática recomendada.</textarea>
-              </div>
-
-              <button id="btn-submit-prediction" type="submit" class="md3-btn md3-btn-filled">
-                📈 Publicar Prognóstico no Mercado
-              </button>
-            </form>
           </div>
         </section>
 
         <!-- =================================================================
-             MÓDULO 4: CARTEIRA PIX, KYC, MFA, JOGO RESPONSÁVEL & LGPD
+             ABA 4: CARTEIRA PIX, KYC, MFA, JOGO RESPONSÁVEL & LGPD
              ================================================================= -->
         <section id="tab-security" class="tab-panel" aria-labelledby="heading-security">
           <div class="md3-section-header">
             <div>
-              <h2 id="heading-security">Segurança Cibernética, KYC Obrigatório, MFA, PIX &amp; Conformidade LGPD/MF</h2>
+              <h2 id="heading-security">Carteira Digital PIX, Verificação KYC, MFA &amp; Privacidade LGPD</h2>
               <p>
-                Criptografia ponta a ponta em HSM (AES-256-GCM), verificação de identidade por Documento Oficial e Comprovante de Residência, autenticação multifator e portabilidade LGPD.
+                Proteção bancária com criptografia HSM (AES-256-GCM), conformidade com o Banco Central e Ministério da Fazenda (Lei nº 14.790/2023).
               </p>
             </div>
           </div>
 
-          <div class="md3-grid-2">
-            <!-- Verificação Obrigatória de Identidade (KYC) -->
-            <form id="form-kyc-verification" class="md3-card">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 1.05rem;">Verificação Obrigatória de Identidade (KYC)</h3>
-                <span id="security-kyc-status-pill" class="md3-badge badge-success">VERIFICADO</span>
+          <!-- Resumo Executivo da Conta e Carteira -->
+          <div class="md3-grid-3">
+            <div class="md3-card" style="border-color: var(--md-sys-color-primary);">
+              <span style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">Saldo Disponível para Apostas e Inscrições</span>
+              <div id="wallet-card-big-balance" class="tabular-nums" style="font-size: 2rem; font-weight: 800; color: var(--md-sys-color-primary);">
+                R$ 14.850,00
               </div>
-              <p style="margin: 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                Exigido pela Lei nº 14.790/2023 (Ministério da Fazenda) e Banco Central para habilitar depósitos, apostas e saques via PIX.
-              </p>
-              <div class="md3-field">
-                <label for="kyc-cpf-input">CPF do Titular (Validação Algoritmo Módulo 11)</label>
-                <input id="kyc-cpf-input" type="text" class="md3-input tabular-nums" value="52998224725" required />
-              </div>
-              <div class="md3-grid-2">
-                <div class="md3-field">
-                  <label for="kyc-doc-type">Documento Oficial com Foto</label>
-                  <select id="kyc-doc-type" class="md3-select">
-                    <option value="CNH_DIGITAL_ICP_BRASIL">CNH Digital (ICP-Brasil)</option>
-                    <option value="RG_CIN_NACIONAL">Carteira de Identidade Nacional (CIN)</option>
-                    <option value="PASSAPORTE_BR">Passaporte Brasileiro</option>
-                  </select>
-                </div>
-                <div class="md3-field">
-                  <label for="kyc-doc-number">Número do Documento Oficial</label>
-                  <input id="kyc-doc-number" type="text" class="md3-input" value="482910394-SP" required />
-                </div>
-              </div>
-              <div class="md3-field">
-                <label for="kyc-residence-input">Comprovante de Residência (Conta de Consumo / Emissão &lt; 90 dias)</label>
-                <input
-                  id="kyc-residence-input"
-                  type="text"
-                  class="md3-input"
-                  value="comprovante_enel_sp_nov2026_assinado.pdf"
-                  required
-                />
-              </div>
-              <button id="btn-submit-kyc" type="submit" class="md3-btn md3-btn-filled">
-                🪪 Validar Identidade &amp; Criptografar no HSM
-              </button>
-            </form>
-
-            <!-- Autenticação Multifator (MFA: App Autenticador TOTP, SMS e E-mail) -->
-            <form id="form-mfa-verify" class="md3-card">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 1.05rem;">Autenticação Multifator (MFA • TOTP / SMS / E-mail)</h3>
-                <span class="md3-badge badge-success">RFC 6238 ATIVO</span>
-              </div>
-              <p style="margin: 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                Valide sua sessão com código de 6 dígitos gerado pelo aplicativo autenticador, SMS ou e-mail.
-              </p>
-              <div class="md3-card-filled" style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">Código TOTP Atual (Gerado pelo HSM para Teste):</div>
-                  <div id="mfa-demo-totp-code" class="mono-code tabular-nums" style="font-size: 1.25rem; font-weight: 800; color: var(--md-sys-color-primary);">
-                    ------
-                  </div>
-                </div>
-                <button type="button" id="btn-copy-totp-code" class="md3-btn md3-btn-tonal md3-btn-sm">
-                  Usar Código Atual
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" id="btn-wallet-hero-deposit" class="md3-btn md3-btn-filled md3-btn-sm">
+                  + Depositar via PIX
+                </button>
+                <button type="button" id="btn-export-lgpd" class="md3-btn md3-btn-outlined md3-btn-sm">
+                  📄 Portabilidade LGPD
                 </button>
               </div>
-              <div class="md3-grid-2">
+            </div>
+
+            <div class="md3-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">Status de Identidade (KYC)</span>
+                <span id="security-kyc-status-pill" class="md3-badge badge-success">VERIFICADO</span>
+              </div>
+              <div style="font-weight: 700; font-size: 0.95rem;">Documento Oficial + Comprovante</div>
+              <span style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+                Criptografado em repouso no Slot 0 do módulo HSM com AES-256-GCM.
+              </span>
+            </div>
+
+            <div class="md3-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">Autenticação Multifator (MFA)</span>
+                <span class="md3-badge badge-success">RFC 6238 ATIVO</span>
+              </div>
+              <div style="font-weight: 700; font-size: 0.95rem;">Token TOTP Atual: <span id="mfa-demo-totp-code" class="mono-code tabular-nums" style="color: var(--md-sys-color-primary);">------</span></div>
+              <span style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
+                Canais habilitados: Aplicativo Autenticador, SMS e E-mail.
+              </span>
+            </div>
+          </div>
+
+          <pre
+            id="lgpd-export-preview"
+            class="mono-code"
+            style="display: none; background: var(--md-sys-color-surface-container-highest); padding: 16px; border-radius: 14px; overflow-x: auto; max-height: 240px; margin: 0; border: 1px solid var(--md-sys-color-primary);"
+          ></pre>
+
+          <!-- Sub-abas de Segurança e Configurações -->
+          <div class="md3-segmented-bar" role="tablist" aria-label="Configurações de conta e segurança">
+            <button type="button" class="md3-seg-btn active" data-sec-subview="subview-sec-kyc">
+              🪪 Identidade KYC &amp; Segundo Fator MFA
+            </button>
+            <button type="button" class="md3-seg-btn" data-sec-subview="subview-sec-rg">
+              ⚖️ Jogo Responsável (SPA/MF) &amp; Notificações
+            </button>
+          </div>
+
+          <div id="subview-sec-kyc" class="sub-view active">
+            <div class="md3-grid-2">
+              <form id="form-kyc-verification" class="md3-card">
+                <h3 style="margin: 0; font-size: 1.08rem;">1. Verificação Obrigatória de Identidade (KYC)</h3>
                 <div class="md3-field">
-                  <label for="mfa-method-select">Canal de Segundo Fator</label>
+                  <label for="kyc-cpf-input">CPF do Titular (Validação Algoritmo Módulo 11)</label>
+                  <input id="kyc-cpf-input" type="text" class="md3-input tabular-nums" value="52998224725" required />
+                </div>
+                <div class="md3-grid-2">
+                  <div class="md3-field">
+                    <label for="kyc-doc-type">Documento Oficial com Foto</label>
+                    <select id="kyc-doc-type" class="md3-select">
+                      <option value="CNH_DIGITAL_ICP_BRASIL">CNH Digital (ICP-Brasil)</option>
+                      <option value="RG_CIN_NACIONAL">Carteira de Identidade Nacional (CIN)</option>
+                      <option value="PASSAPORTE_BR">Passaporte Brasileiro</option>
+                    </select>
+                  </div>
+                  <div class="md3-field">
+                    <label for="kyc-doc-number">Número do Documento</label>
+                    <input id="kyc-doc-number" type="text" class="md3-input" value="482910394-SP" required />
+                  </div>
+                </div>
+                <div class="md3-field">
+                  <label for="kyc-residence-input">Comprovante de Residência (&lt; 90 dias)</label>
+                  <input id="kyc-residence-input" type="text" class="md3-input" value="comprovante_enel_sp_nov2026_assinado.pdf" required />
+                </div>
+                <button id="btn-submit-kyc" type="submit" class="md3-btn md3-btn-filled">
+                  🪪 Validar Identidade &amp; Criptografar no HSM
+                </button>
+              </form>
+
+              <form id="form-mfa-verify" class="md3-card">
+                <h3 style="margin: 0; font-size: 1.08rem;">2. Validação de Segundo Fator (MFA)</h3>
+                <p style="margin: 0; font-size: 0.84rem; color: var(--md-sys-color-on-surface-variant);">
+                  Confirme sua sessão utilizando o código de 6 dígitos do aplicativo autenticador, SMS ou e-mail.
+                </p>
+                <div class="md3-field">
+                  <label for="mfa-method-select">Canal de Autenticação</label>
                   <select id="mfa-method-select" class="md3-select">
                     <option value="TOTP">Aplicativo Autenticador (TOTP RFC 6238)</option>
                     <option value="SMS">Token SMS (+55 ** *****-7766)</option>
@@ -632,20 +438,24 @@
                 </div>
                 <div class="md3-field">
                   <label for="mfa-code-input">Código de 6 Dígitos</label>
-                  <input id="mfa-code-input" type="text" maxlength="6" class="md3-input tabular-nums" placeholder="000000" required />
+                  <div style="display: flex; gap: 8px;">
+                    <input id="mfa-code-input" type="text" maxlength="6" class="md3-input tabular-nums" style="flex: 1;" placeholder="000000" required />
+                    <button type="button" id="btn-copy-totp-code" class="md3-btn md3-btn-tonal">
+                      Preencher Token Atual
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <button id="btn-submit-mfa" type="submit" class="md3-btn md3-btn-tonal">
-                🔐 Validar Segundo Fator (MFA)
-              </button>
-            </form>
+                <button id="btn-submit-mfa" type="submit" class="md3-btn md3-btn-filled">
+                  🔐 Confirmar Código MFA
+                </button>
+              </form>
+            </div>
           </div>
 
-          <div class="md3-grid-2">
-            <!-- Jogo Responsável (Portaria SPA/MF) & Portabilidade LGPD -->
-            <div class="md3-card">
-              <h3 style="margin: 0; font-size: 1.05rem;">Conformidade SPA/MF (Jogo Responsável) &amp; Portabilidade LGPD</h3>
-              <form id="form-responsible-gaming" style="display: flex; flex-direction: column; gap: 12px;">
+          <div id="subview-sec-rg" class="sub-view">
+            <div class="md3-grid-2">
+              <form id="form-responsible-gaming" class="md3-card">
+                <h3 style="margin: 0; font-size: 1.08rem;">Limites de Jogo Responsável (Portaria SPA/MF)</h3>
                 <div class="md3-grid-2">
                   <div class="md3-field">
                     <label for="rg-daily-limit">Limite Diário de Depósito PIX (R$)</label>
@@ -656,134 +466,104 @@
                     <input id="rg-monthly-limit" type="number" class="md3-input tabular-nums" value="25000" />
                   </div>
                 </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                  <button type="submit" class="md3-btn md3-btn-tonal">Salvar Limites SPA/MF</button>
-                  <button type="button" id="btn-export-lgpd" class="md3-btn md3-btn-outlined">
-                    📄 Exportar Relatório de Dados Pessoais (LGPD Art. 18)
-                  </button>
-                </div>
+                <button type="submit" class="md3-btn md3-btn-filled">Salvar Limites Financeiros</button>
               </form>
-              <pre
-                id="lgpd-export-preview"
-                class="mono-code"
-                style="display: none; background: var(--md-sys-color-surface-container-highest); padding: 12px; border-radius: 8px; overflow-x: auto; max-height: 200px; margin: 0;"
-              ></pre>
-            </div>
 
-            <!-- Preferências de Notificação em Tempo Real -->
-            <form id="form-notif-preferences" class="md3-card">
-              <h3 style="margin: 0; font-size: 1.05rem;">Preferências de Notificações (E-mail, Push e Plataforma)</h3>
-              <p style="margin: 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                Personalize como deseja receber alertas de gols, status de apostas, confirmações PIX e comunicados.
-              </p>
-              <div class="md3-grid-3">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-ch-inapp" checked /> Na Plataforma (SSE)
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-ch-push" checked /> Push Notification
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-ch-email" checked /> E-mail Oficial
-                </label>
-              </div>
-              <div class="md3-grid-2" style="padding-top: 6px; border-top: 1px solid var(--md-sys-color-outline-variant);">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-cat-matches" checked /> Partidas e Resultados Ao Vivo
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-cat-bets" checked /> Status de Apostas e Cashout
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-cat-payments" checked /> Confirmações PIX e Pagamentos
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                  <input type="checkbox" id="pref-cat-tournaments" checked /> Alterações em Campeonatos
-                </label>
-              </div>
-              <button type="submit" class="md3-btn md3-btn-tonal">
-                🔔 Salvar Preferências de Notificação
-              </button>
-            </form>
+              <form id="form-notif-preferences" class="md3-card">
+                <h3 style="margin: 0; font-size: 1.08rem;">Preferências de Notificação em Tempo Real</h3>
+                <div class="md3-grid-3">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-ch-inapp" checked /> Na Plataforma
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-ch-push" checked /> Push Mobile
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-ch-email" checked /> E-mail
+                  </label>
+                </div>
+                <div class="md3-grid-2" style="padding-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant);">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-cat-matches" checked /> Gols e Resultados Ao Vivo
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-cat-bets" checked /> Apostas e Cashout
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-cat-payments" checked /> Confirmações PIX
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem;">
+                    <input type="checkbox" id="pref-cat-tournaments" checked /> Campeonatos
+                  </label>
+                </div>
+                <button type="submit" class="md3-btn md3-btn-tonal">🔔 Salvar Preferências</button>
+              </form>
+            </div>
           </div>
         </section>
 
         <!-- =================================================================
-             MÓDULO 5: PAINEL ADMINISTRATIVO HIERÁRQUICO (RBAC) & LEDGER
+             ABA 5: PAINEL ADMINISTRATIVO HIERÁRQUICO (RBAC) & LEDGER SHA-256
              ================================================================= -->
         <section id="tab-admin" class="tab-panel" aria-labelledby="heading-admin">
           <div class="md3-section-header">
             <div>
-              <h2 id="heading-admin">Painel Administrativo Hierárquico, Reconciliação Bancária &amp; HSM</h2>
+              <h2 id="heading-admin">Governança Administrativa (RBAC), Reconciliação PIX &amp; HSM</h2>
               <p>
-                Controle granular de permissões (Super Administrador, Moderador e Analista Financeiro), Ledger Imutável SHA-256, WAF/IDS e resolução de ocorrências.
+                Permissões hierárquicas (Super Administrador, Moderador e Analista Financeiro), auditoria de blocos SHA-256 e ocorrências.
               </p>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               <button type="button" id="btn-admin-reconcile" class="md3-btn md3-btn-filled">
-                🏦 Reconciliar SPI/BCB &amp; Auditar Ledger SHA-256
+                🏦 Reconciliar SPI/BCB &amp; Auditar Ledger
               </button>
               <button type="button" id="btn-admin-rotate-hsm" class="md3-btn md3-btn-tertiary">
-                🔑 Rotacionar Chave AES-256-GCM no HSM
+                🔑 Rotacionar Chave HSM AES-256-GCM
               </button>
             </div>
           </div>
 
-          <!-- Status da Permissão Atual e Resumo Operacional -->
           <div id="admin-rbac-banner" class="md3-card-filled"></div>
 
-          <!-- Ledger Imutável SHA-256 & Reconciliação Financeira -->
           <div class="md3-card">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <div>
-                <h3 style="margin: 0; font-size: 1.1rem;">Log Auditável Imutável de Transações Financeiras (Hash-Chained SHA-256 + HSM)</h3>
-                <p style="margin: 2px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                  Cada transação PIX, inscrição de campeonato, aposta ou compra de previsão é encadeada ao hash anterior e assinada pelo HSM.
-                </p>
+                <h3 style="margin: 0; font-size: 1.1rem;">Ledger Financeiro Imutável (Cadeia Criptográfica SHA-256 + Assinatura HSM)</h3>
               </div>
               <span id="ledger-integrity-badge" class="md3-badge badge-success">CADEIA SHA-256 100% ÍNTEGRA</span>
             </div>
             <div id="admin-ledger-table" class="md3-table-wrap"></div>
           </div>
 
-          <!-- Ocorrências de Suporte e Medidas Disciplinares -->
           <div class="md3-grid-2">
             <div class="md3-card">
-              <h3 style="margin: 0; font-size: 1.05rem;">Ocorrências de Suporte &amp; Homologação</h3>
+              <h3 style="margin: 0; font-size: 1.08rem;">Fila de Suporte &amp; Homologação</h3>
               <div id="admin-tickets-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
 
             <form id="form-admin-disciplinary" class="md3-card">
-              <h3 style="margin: 0; font-size: 1.05rem;">Aplicar Medida Disciplinar / Bloqueio Preventivo</h3>
+              <h3 style="margin: 0; font-size: 1.08rem;">Aplicar Medida Disciplinar / Bloqueio Preventivo PLD</h3>
               <div class="md3-grid-2">
                 <div class="md3-field">
-                  <label for="disc-target-name">Usuário / Clube / Prognosticador</label>
+                  <label for="disc-target-name">Alvo da Medida</label>
                   <input id="disc-target-name" type="text" class="md3-input" value="Conta Sob Investigação PLD" required />
                 </div>
                 <div class="md3-field">
                   <label for="disc-action-type">Tipo de Medida</label>
                   <select id="disc-action-type" class="md3-select">
                     <option value="WARNING">Advertência Formal</option>
-                    <option value="SUSPENSION">Suspensão Temporária de Conta</option>
+                    <option value="SUSPENSION">Suspensão Temporária</option>
                     <option value="AML_FREEZE">Congelamento Preventivo PLD/FT (COAF)</option>
-                    <option value="DISQUALIFICATION">Desclassificação de Torneio por Regra</option>
+                    <option value="DISQUALIFICATION">Desclassificação de Torneio</option>
                   </select>
                 </div>
               </div>
               <div class="md3-field">
-                <label for="disc-reason-input">Fundamentação Técnica / Regulatória</label>
-                <input
-                  id="disc-reason-input"
-                  type="text"
-                  class="md3-input"
-                  value="Alerta de velocidade atípica de ordens identificado pelo motor de Machine Learning."
-                  required
-                />
+                <label for="disc-reason-input">Fundamentação Regulatória</label>
+                <input id="disc-reason-input" type="text" class="md3-input" value="Padrão atípico de velocidade de ordens detectado pelo motor ML." required />
               </div>
-              <button type="submit" class="md3-btn md3-btn-tonal">
-                ⚖️ Registrar Medida Disciplinar
-              </button>
-              <div id="admin-disciplinary-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;"></div>
+              <button type="submit" class="md3-btn md3-btn-tonal">⚖️ Registrar Medida</button>
+              <div id="admin-disciplinary-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </form>
           </div>
         </section>
@@ -791,17 +571,28 @@
     </div>
 
     <!-- =====================================================================
-         BILHETE DE APOSTAS (BET SLIP PERSISTENTE — CONCLUSÃO EM <= 3 CLIQUES)
+         BILHETE DE APOSTAS CONTEXTUAL (SIDE SHEET DESKTOP / BOTTOM SHEET MOBILE)
          ===================================================================== -->
-    <aside class="md3-betslip-aside" aria-label="Bilhete de Apostas Esportivas">
+    <aside id="betslip-aside" class="md3-betslip-aside" aria-label="Bilhete de Apostas Esportivas">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h2 style="margin: 0; font-size: 1.1rem;">Bilhete de Apostas</h2>
+          <h2 style="margin: 0; font-size: 1.12rem;">Bilhete de Apostas</h2>
           <span style="font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant);">
-            Fluxo Rápido ≤ 3 Cliques • Simples ou Múltipla
+            Conclusão em ≤ 3 cliques • Liquidação PIX
           </span>
         </div>
-        <span id="betslip-count-badge" class="md3-badge badge-success tabular-nums">1 seleção</span>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span id="betslip-count-badge" class="md3-badge badge-success tabular-nums">1 sel.</span>
+          <button
+            type="button"
+            id="btn-close-betslip-mobile"
+            class="md3-btn md3-btn-outlined md3-btn-sm"
+            style="min-height: 30px; padding: 0 10px;"
+            aria-label="Minimizar bilhete"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div id="betslip-items-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
@@ -827,11 +618,11 @@
         </div>
 
         <div class="md3-field">
-          <label for="betslip-payment-method">Método de Liquidação Instantânea</label>
+          <label for="betslip-payment-method">Método de Pagamento</label>
           <select id="betslip-payment-method" class="md3-select">
             <option value="PIX">PIX Instantâneo (QR Code / Copia e Cola BCB)</option>
             <option value="WALLET">Saldo da Carteira Campeonei</option>
-            <option value="CREDIT_CARD">Cartão Autorizado Tokenizado (HSM)</option>
+            <option value="CREDIT_CARD">Cartão de Crédito Tokenizado (HSM)</option>
           </select>
         </div>
 
@@ -839,7 +630,7 @@
           <span>Cotação Combinada:</span>
           <strong id="betslip-total-odds" class="tabular-nums">@1.58</strong>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+        <div style="display: flex; justify-content: space-between; font-size: 1rem;">
           <span>Retorno Potencial:</span>
           <strong id="betslip-potential-return" class="tabular-nums" style="color: var(--md-sys-color-primary);">
             R$ 79,00
@@ -850,7 +641,7 @@
           id="btn-place-bet-now"
           type="button"
           class="md3-btn md3-btn-filled"
-          style="width: 100%; height: 44px; font-size: 0.92rem;"
+          style="width: 100%; min-height: 48px; font-size: 0.95rem;"
         >
           ⚡ Confirmar Aposta Agora
         </button>
@@ -858,20 +649,227 @@
     </aside>
   </div>
 
+  <!-- Barra Flutuante Mobile/Tablet para Abrir o Bilhete (Thumb-Zone Ergonomics) -->
+  <button id="mobile-betslip-fab" type="button" class="mobile-betslip-fab-bar" aria-label="Abrir bilhete de apostas">
+    <span>🎟️ Bilhete (<span id="mobile-fab-count">1</span>) • <span id="mobile-fab-odds" class="tabular-nums">@1.58</span></span>
+    <span class="tabular-nums">Retorno: <strong id="mobile-fab-return">R$ 79,00</strong> ▲</span>
+  </button>
+
   <!-- =======================================================================
-       MODAL 1: PAGAMENTO PIX INSTANTÂNEO (QR CODE EMVCo + COPIA E COLA CRC16)
+       MODAL 1: CRIAR CAMPEONATO PERSONALIZADO (PROGRESSIVE DISCLOSURE)
+       ======================================================================= -->
+  <div id="modal-tournament-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-trn-title">
+    <div class="md3-dialog">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-trn-title" style="margin: 0; font-size: 1.2rem;">Criar Campeonato Personalizado</h2>
+        <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-close-modal="modal-tournament-backdrop">Fechar</button>
+      </div>
+      <form id="form-create-tournament" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="md3-grid-2">
+          <div class="md3-field">
+            <label for="trn-name-input">Nome da Competição</label>
+            <input id="trn-name-input" type="text" class="md3-input" value="Taça Campeonei Ouro 2026" required />
+          </div>
+          <div class="md3-field">
+            <label for="trn-fed-select">Federação Homologadora</label>
+            <select id="trn-fed-select" class="md3-select"></select>
+          </div>
+        </div>
+        <div class="md3-grid-3">
+          <div class="md3-field">
+            <label for="trn-format-select">Formato</label>
+            <select id="trn-format-select" class="md3-select">
+              <option value="PONTOS_CORRIDOS">Pontos Corridos</option>
+              <option value="MATA_MATA">Mata-Mata (Eliminatória)</option>
+              <option value="GRUPOS_MATA_MATA">Fase de Grupos + Playoffs</option>
+            </select>
+          </div>
+          <div class="md3-field">
+            <label for="trn-max-teams">Limite de Times</label>
+            <input id="trn-max-teams" type="number" class="md3-input tabular-nums" min="4" max="64" value="16" required />
+          </div>
+          <div class="md3-field">
+            <label for="trn-entry-fee">Inscrição (R$)</label>
+            <input id="trn-entry-fee" type="number" class="md3-input tabular-nums" min="0" step="50" value="2000" required />
+          </div>
+        </div>
+        <div class="md3-field">
+          <label for="trn-tiebreaker-select">Critérios de Desempate</label>
+          <select id="trn-tiebreaker-select" class="md3-select">
+            <option value="WINS,GOAL_DIFF,GOALS_FOR,HEAD_TO_HEAD,FAIR_PLAY">
+              Padrão CBF: Vitórias &gt; Saldo &gt; Gols Pró &gt; Confronto Direto &gt; Cartões
+            </option>
+            <option value="GOAL_DIFF,GOALS_FOR,WINS,HEAD_TO_HEAD">
+              Padrão FIFA: Saldo de Gols &gt; Gols Pró &gt; Vitórias
+            </option>
+          </select>
+        </div>
+        <div class="md3-field">
+          <label for="trn-invite-emails">Convite Automatizado por E-mail (separados por vírgula)</label>
+          <input id="trn-invite-emails" type="text" class="md3-input" value="diretoria@palmeiras.com.br, futebol@flamengo.com.br" />
+        </div>
+        <div id="prize-calc-preview" class="md3-card-filled" aria-live="polite"></div>
+        <button id="btn-submit-tournament" type="submit" class="md3-btn md3-btn-filled">
+          🏆 Criar Campeonato &amp; Disparar Convites
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 2: CADASTRAR CLUBE COM ELENCO
+       ======================================================================= -->
+  <div id="modal-team-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-team-title">
+    <div class="md3-dialog">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-team-title" style="margin: 0; font-size: 1.2rem;">Cadastrar Clube com Elenco e Histórico</h2>
+        <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-close-modal="modal-team-backdrop">Fechar</button>
+      </div>
+      <form id="form-create-team" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="md3-grid-3">
+          <div class="md3-field">
+            <label for="team-name-input">Nome Oficial do Clube</label>
+            <input id="team-name-input" type="text" class="md3-input" placeholder="Ex: Cruzeiro EC" required />
+          </div>
+          <div class="md3-field">
+            <label for="team-short-input">Sigla (3 letras)</label>
+            <input id="team-short-input" type="text" class="md3-input" placeholder="CRU" maxlength="4" required />
+          </div>
+          <div class="md3-field">
+            <label for="team-stadium-input">Estádio / Arena</label>
+            <input id="team-stadium-input" type="text" class="md3-input" placeholder="Mineirão" required />
+          </div>
+        </div>
+        <div class="md3-grid-2">
+          <div class="md3-field">
+            <label for="team-coach-input">Treinador Principal</label>
+            <input id="team-coach-input" type="text" class="md3-input" placeholder="Fernando Seabra" />
+          </div>
+          <div class="md3-field">
+            <label for="team-star-player-input">Jogador Destaque (Camisa 10)</label>
+            <input id="team-star-player-input" type="text" class="md3-input" placeholder="Matheus Pereira" />
+          </div>
+        </div>
+        <button id="btn-submit-team" type="submit" class="md3-btn md3-btn-filled">
+          🛡️ Registrar Clube e Elenco
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 3: HOMOLOGAR NOVA FEDERAÇÃO ESPORTIVA
+       ======================================================================= -->
+  <div id="modal-federation-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-fed-title">
+    <div class="md3-dialog">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-fed-title" style="margin: 0; font-size: 1.2rem;">Homologar Federação Esportiva</h2>
+        <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-close-modal="modal-federation-backdrop">Fechar</button>
+      </div>
+      <form id="form-create-federation" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="md3-grid-3">
+          <div class="md3-field">
+            <label for="fed-acronym-input">Sigla</label>
+            <input id="fed-acronym-input" type="text" class="md3-input" placeholder="Ex: FERJ" required />
+          </div>
+          <div class="md3-field">
+            <label for="fed-name-input">Nome Oficial</label>
+            <input id="fed-name-input" type="text" class="md3-input" placeholder="Federação de Futebol do RJ" required />
+          </div>
+          <div class="md3-field">
+            <label for="fed-sport-select">Modalidade</label>
+            <select id="fed-sport-select" class="md3-select">
+              <option value="Futebol">Futebol</option>
+              <option value="Basquete">Basquete</option>
+              <option value="Vôlei">Vôlei</option>
+              <option value="eSports">eSports</option>
+            </select>
+          </div>
+        </div>
+        <button id="btn-submit-federation" type="submit" class="md3-btn md3-btn-filled">
+          🏛️ Homologar Federação
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 4: PUBLICAR PREVISÃO ESPORTIVA NO MERCADO
+       ======================================================================= -->
+  <div id="modal-prediction-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-pred-title">
+    <div class="md3-dialog">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-pred-title" style="margin: 0; font-size: 1.2rem;">Publicar e Vender Previsão Esportiva</h2>
+        <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-close-modal="modal-prediction-backdrop">Fechar</button>
+      </div>
+      <form id="form-publish-prediction" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="md3-grid-2">
+          <div class="md3-field">
+            <label for="pred-sport-select">Esporte</label>
+            <select id="pred-sport-select" class="md3-select">
+              <option value="Futebol">Futebol</option>
+              <option value="Basquete">Basquete</option>
+              <option value="Vôlei">Vôlei</option>
+            </select>
+          </div>
+          <div class="md3-field">
+            <label for="pred-match-input">Partida Analisada</label>
+            <input id="pred-match-input" type="text" class="md3-input" value="SE Palmeiras vs CR Flamengo (Série A)" required />
+          </div>
+        </div>
+        <div class="md3-grid-2">
+          <div class="md3-field">
+            <label for="pred-selection-input">Entrada Recomendada</label>
+            <input id="pred-selection-input" type="text" class="md3-input" placeholder="Ex: Ambas Marcam + Mais de 2.5 Gols" required />
+          </div>
+          <div class="md3-field">
+            <label for="pred-odds-input">Cotação Justa (@Odd)</label>
+            <input id="pred-odds-input" type="number" step="0.01" min="1.10" class="md3-input tabular-nums" value="2.05" required />
+          </div>
+        </div>
+        <div class="md3-grid-3">
+          <div class="md3-field">
+            <label for="pred-price-input">Preço (R$)</label>
+            <input id="pred-price-input" type="number" step="0.50" min="0" class="md3-input tabular-nums" value="24.90" required />
+          </div>
+          <div class="md3-field">
+            <label for="pred-units-input">Stake (Unid.)</label>
+            <input id="pred-units-input" type="number" step="0.5" min="0.5" max="10" class="md3-input tabular-nums" value="2.5" required />
+          </div>
+          <div class="md3-field">
+            <label for="pred-confidence-input">Confiança (%)</label>
+            <input id="pred-confidence-input" type="number" min="50" max="99" class="md3-input tabular-nums" value="90" required />
+          </div>
+        </div>
+        <div class="md3-field">
+          <label for="pred-preview-input">Resumo Público (Visível antes da compra)</label>
+          <input id="pred-preview-input" type="text" class="md3-input" value="Análise tática baseada em Expected Goals (xG) e pressão no último terço." required />
+        </div>
+        <div class="md3-field">
+          <label for="pred-full-textarea">Relatório Tático Completo (Protegido por Criptografia HSM até a Compra)</label>
+          <textarea id="pred-full-textarea" class="md3-textarea" required>MODELO QUANTITATIVO +EV: Ambas as equipes criaram média de 2.4 grandes chances por tempo. Valor esperado positivo de +11.8% na linha asiática recomendada.</textarea>
+        </div>
+        <button id="btn-submit-prediction" type="submit" class="md3-btn md3-btn-filled">
+          📈 Publicar Prognóstico no Mercado
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 5: PAGAMENTO PIX INSTANTÂNEO (QR CODE EMVCo + COPIA E COLA CRC16)
        ======================================================================= -->
   <div id="modal-pix-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-pix-title">
     <div class="md3-dialog">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2 id="modal-pix-title" style="margin: 0; font-size: 1.2rem;">Depósito &amp; Liquidação PIX Instantânea</h2>
-        <button type="button" id="btn-close-pix-modal" class="md3-btn md3-btn-tonal md3-btn-sm">Fechar</button>
+        <button type="button" id="btn-close-pix-modal" class="md3-btn md3-btn-outlined md3-btn-sm">Fechar</button>
       </div>
-      <p style="margin: 0 0 14px; font-size: 0.85rem; color: var(--md-sys-color-on-surface-variant);">
-        Processamento seguro conectado ao SPI do Banco Central com código EMVCo BRCode e gravação imediata no Ledger Imutável SHA-256.
+      <p style="margin: 0; font-size: 0.85rem; color: var(--md-sys-color-on-surface-variant);">
+        Conectado ao SPI do Banco Central com código EMVCo BRCode CRC16-CCITT e gravação no Ledger Imutável SHA-256.
       </p>
 
-      <div class="md3-grid-2" style="align-items: center; margin-bottom: 14px;">
+      <div class="md3-grid-2" style="align-items: center;">
         <div style="text-align: center;">
           <img
             id="pix-qr-image"
@@ -901,7 +899,7 @@
         </div>
       </div>
 
-      <div class="md3-field" style="margin-bottom: 14px;">
+      <div class="md3-field">
         <label for="pix-brcode-textarea">PIX Copia e Cola (Padrão EMVCo BR.GOV.BCB.PIX)</label>
         <textarea id="pix-brcode-textarea" class="md3-textarea mono-code" readonly></textarea>
       </div>
@@ -915,12 +913,12 @@
   </div>
 
   <!-- =======================================================================
-       MODAL 2: CENTRAL DE NOTIFICAÇÕES EM TEMPO REAL
+       MODAL 6: CENTRAL DE NOTIFICAÇÕES EM TEMPO REAL
        ======================================================================= -->
   <div id="modal-notif-backdrop" class="md3-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-notif-title">
     <div class="md3-dialog">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 id="modal-notif-title" style="margin: 0; font-size: 1.2rem;">Notificações em Tempo Real (SSE / Push / E-mail)</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-notif-title" style="margin: 0; font-size: 1.2rem;">Notificações em Tempo Real</h2>
         <div style="display: flex; gap: 8px;">
           <button type="button" id="btn-mark-all-notifs-read" class="md3-btn md3-btn-tonal md3-btn-sm">
             Marcar Lidas
