@@ -28,9 +28,9 @@
     betSlip: [
       {
         matchId: 'mch-pal-fla-live',
-        matchLabel: 'SE Palmeiras vs CR Flamengo',
-        market: 'Resultado Final (1X2)',
-        selection: 'SE Palmeiras',
+        matchLabel: 'FURIA Esports vs Imperial Esports (CS2)',
+        market: 'Vencedor da Série (MD3)',
+        selection: 'FURIA Esports',
         odds: 1.58
       }
     ]
@@ -96,7 +96,7 @@
           const latEl = document.getElementById('metric-odds-latency');
           if (latEl) {
             const ms = 9 + Math.floor(Math.random() * 8);
-            latEl.textContent = `${ms} ms • Ao Vivo`;
+            latEl.textContent = `${ms} ms • Telemetria Ao Vivo`;
           }
         }
       } catch {
@@ -176,7 +176,7 @@
     if (kycBadge) {
       if (u.insiderRestricted) {
         kycBadge.className = 'md3-badge badge-error';
-        kycBadge.textContent = 'ATLETA IMPEDIDO (LEI 14.790)';
+        kycBadge.textContent = 'PRO-PLAYER IMPEDIDO (ESIC / LEI 14.790)';
       } else if (u.kycStatus === 'VERIFIED') {
         kycBadge.className = 'md3-badge badge-success';
         kycBadge.textContent = `KYC OK • ${u.role.toUpperCase()}`;
@@ -205,18 +205,19 @@
   }
 
   /* ========================================================================
-     HERO MATCH CENTER & PARTIDAS AO VIVO (UX ESCANEÁVEL E PROGRESSIVA)
+     HERO MATCH CENTER E-SPORTS & SÉRIES AO VIVO (UX ESCANEÁVEL E PROGRESSIVA)
      ======================================================================== */
   function renderFeaturedHero() {
     const hero = document.getElementById('featured-match-hero');
     if (!hero || !state.matches.length) return;
     const m = state.matches[0];
-    const mw = m.odds?.matchWinner || { home: 1.58, draw: 3.75, away: 5.8 };
+    const mw = m.odds?.matchWinner || { home: 1.58, draw: 4.8, away: 2.45 };
+    const clockLabel = m.sport === 'League of Legends' ? `${m.minute} min` : `Round ${m.minute}`;
 
     hero.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <span class="md3-badge badge-success"><span class="live-dot"></span> JOGO DESTAQUE AO VIVO • ${m.minute}'</span>
+          <span class="md3-badge badge-success"><span class="live-dot"></span> SÉRIE DESTAQUE AO VIVO • ${m.sport.toUpperCase()} • ${clockLabel}</span>
           <span style="font-size: 0.8rem; color: var(--md-sys-color-on-surface-variant); font-weight: 600;">
             ${m.tournament_name} • ${m.round_name}
           </span>
@@ -235,18 +236,18 @@
         </div>
 
         <div style="font-size: 0.8rem; color: var(--md-sys-color-on-surface-variant); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <span>⚡ ${m.stats.lastEvent || 'Partida em andamento'}</span>
+          <span>⚡ ${m.stats.lastEvent || 'Série em andamento'}</span>
           <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-sync-match="${m.id}">
-            📡 Simular Gol Oficial (${m.official_feed_code})
+            📡 Simular Round / Kill (${m.official_feed_code})
           </button>
         </div>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--md-sys-color-on-surface-variant);">
-          <span>Posse: <strong>${m.stats.possessionHome}%</strong></span>
-          <span>xG: <strong>${m.stats.xgHome} x ${m.stats.xgAway}</strong></span>
-          <span>Posse: <strong>${m.stats.possessionAway}%</strong></span>
+          <span>Domínio ${m.home_short}: <strong>${m.stats.possessionHome}%</strong></span>
+          <span>Rating / Adv: <strong>${m.stats.xgHome} x ${m.stats.xgAway}</strong></span>
+          <span>Domínio ${m.away_short}: <strong>${m.stats.possessionAway}%</strong></span>
         </div>
         <div class="momentum-bar-track">
           <div class="momentum-bar-home" style="width: ${m.stats.possessionHome}%;"></div>
@@ -254,19 +255,19 @@
         <div class="odds-grid-3">
           <button type="button" class="odd-button"
             data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-            data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
+            data-bet-market="Vencedor da Série (MD3)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
             <span class="odd-label">1 • ${m.home_short}</span>
             <span class="odd-value tabular-nums">@${Number(mw.home).toFixed(2)}</span>
           </button>
           <button type="button" class="odd-button"
             data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-            data-bet-market="Resultado Final (1X2)" data-bet-selection="Empate" data-bet-odds="${mw.draw}">
-            <span class="odd-label">X • Empate</span>
+            data-bet-market="Total de Mapas" data-bet-selection="3º Mapa Decisivo (Over 2.5)" data-bet-odds="${mw.draw}">
+            <span class="odd-label">MD3 • 3 Mapas</span>
             <span class="odd-value tabular-nums">@${Number(mw.draw).toFixed(2)}</span>
           </button>
           <button type="button" class="odd-button"
             data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-            data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
+            data-bet-market="Vencedor da Série (MD3)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
             <span class="odd-label">2 • ${m.away_short}</span>
             <span class="odd-value tabular-nums">@${Number(mw.away).toFixed(2)}</span>
           </button>
@@ -291,17 +292,18 @@
     });
 
     if (!filteredMatches.length) {
-      container.innerHTML = `<div class="md3-card">Nenhuma partida encontrada para "${state.searchQuery}".</div>`;
+      container.innerHTML = `<div class="md3-card">Nenhuma série de e-sports encontrada para "${state.searchQuery}".</div>`;
       return;
     }
 
     container.innerHTML = filteredMatches
       .map((m) => {
         const odds = m.odds || {};
-        const mw = odds.matchWinner || { home: 1.8, draw: 3.3, away: 4.2 };
+        const mw = odds.matchWinner || { home: 1.8, draw: 4.2, away: 2.2 };
         const hc = odds.handicap || {};
         const ou = odds.goalsOverUnder || {};
         const btts = odds.btts || { yes: 1.75, no: 2.05 };
+        const clockLabel = m.sport === 'League of Legends' ? `${m.minute} min` : `R${m.minute}`;
 
         const isSel = (market, selection) =>
           state.betSlip.some((s) => s.matchId === m.id && s.market === market && s.selection === selection);
@@ -317,10 +319,10 @@
           <article class="md3-card" id="match-card-${m.id}">
             <div class="match-card-header">
               <div>
-                <strong>${m.tournament_name}</strong> • <span>${m.sport}</span>
+                <strong>${m.tournament_name}</strong> • <span class="md3-badge badge-neutral">${m.sport}</span>
               </div>
               <span class="md3-badge badge-success tabular-nums">
-                <span class="live-dot"></span> ${m.minute}'
+                <span class="live-dot"></span> ${clockLabel}
               </span>
             </div>
 
@@ -336,32 +338,32 @@
               </div>
             </div>
 
-            <div class="momentum-bar-track" title="Posse de bola ${m.stats.possessionHome}% x ${m.stats.possessionAway}%">
+            <div class="momentum-bar-track" title="Controle de Mapa / Economia ${m.stats.possessionHome}% x ${m.stats.possessionAway}%">
               <div class="momentum-bar-home" style="width: ${m.stats.possessionHome}%;"></div>
             </div>
 
-            <!-- Mercado Principal 1X2 (Sempre Visível e Ergonômico >= 48px) -->
+            <!-- Mercado Principal E-Sports (Sempre Visível e Ergonômico >= 48px) -->
             <div>
               <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; color: var(--md-sys-color-on-surface-variant);">
-                <span>Resultado Final (1X2)</span>
-                <span>Posse ${m.stats.possessionHome}%-${m.stats.possessionAway}% • Chutes ${m.stats.shotsOnTargetHome}x${m.stats.shotsOnTargetAway}</span>
+                <span>Vencedor da Série (MD3) &amp; Decider</span>
+                <span>Domínio ${m.stats.possessionHome}%-${m.stats.possessionAway}% • Entry Kills ${m.stats.shotsOnTargetHome}x${m.stats.shotsOnTargetAway}</span>
               </div>
               <div class="odds-grid-3">
-                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.home_team_name) ? 'selected' : ''}"
+                <button type="button" class="odd-button ${isSel('Vencedor da Série (MD3)', m.home_team_name) ? 'selected' : ''}"
                   data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                  data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
+                  data-bet-market="Vencedor da Série (MD3)" data-bet-selection="${m.home_team_name}" data-bet-odds="${mw.home}">
                   <span class="odd-label">1 • ${m.home_short}</span>
                   <span class="odd-value tabular-nums">@${Number(mw.home).toFixed(2)}</span>
                 </button>
-                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', 'Empate') ? 'selected' : ''}"
+                <button type="button" class="odd-button ${isSel('Total de Mapas', '3º Mapa Decisivo (Over 2.5)') ? 'selected' : ''}"
                   data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                  data-bet-market="Resultado Final (1X2)" data-bet-selection="Empate" data-bet-odds="${mw.draw}">
-                  <span class="odd-label">X • Empate</span>
+                  data-bet-market="Total de Mapas" data-bet-selection="3º Mapa Decisivo (Over 2.5)" data-bet-odds="${mw.draw}">
+                  <span class="odd-label">MD3 • 3 Mapas</span>
                   <span class="odd-value tabular-nums">@${Number(mw.draw).toFixed(2)}</span>
                 </button>
-                <button type="button" class="odd-button ${isSel('Resultado Final (1X2)', m.away_team_name) ? 'selected' : ''}"
+                <button type="button" class="odd-button ${isSel('Vencedor da Série (MD3)', m.away_team_name) ? 'selected' : ''}"
                   data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                  data-bet-market="Resultado Final (1X2)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
+                  data-bet-market="Vencedor da Série (MD3)" data-bet-selection="${m.away_team_name}" data-bet-odds="${mw.away}">
                   <span class="odd-label">2 • ${m.away_short}</span>
                   <span class="odd-value tabular-nums">@${Number(mw.away).toFixed(2)}</span>
                 </button>
@@ -375,16 +377,16 @@
                   ? `
                 <div>
                   <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
-                    Handicap Asiático
+                    Handicap de Mapas &amp; Rounds / Abates
                   </div>
                   <div class="odds-grid-2">
                     ${hcKeys
                       .map((k) => {
                         const item = hc[k];
                         return `
-                          <button type="button" class="odd-button ${isSel('Handicap Asiático', item.label) ? 'selected' : ''}"
+                          <button type="button" class="odd-button ${isSel('Handicap E-Sports', item.label) ? 'selected' : ''}"
                             data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                            data-bet-market="Handicap Asiático" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
+                            data-bet-market="Handicap E-Sports" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
                             <span class="odd-label">${item.label}</span>
                             <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
                           </button>
@@ -402,26 +404,26 @@
                   ? `
                 <div>
                   <div style="font-size: 0.74rem; font-weight: 700; margin-bottom: 5px; color: var(--md-sys-color-on-surface-variant);">
-                    Total de Gols / Pontos &amp; Ambas Marcam
+                    Over/Under Rounds, Abates &amp; Ambos Vencem Mapa
                   </div>
                   <div class="odds-grid-3">
                     ${ouKeys
                       .map((k) => {
                         const item = ou[k];
                         return `
-                          <button type="button" class="odd-button ${isSel('Total de Gols', item.label) ? 'selected' : ''}"
+                          <button type="button" class="odd-button ${isSel('Totais E-Sports', item.label) ? 'selected' : ''}"
                             data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                            data-bet-market="Total de Gols" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
+                            data-bet-market="Totais E-Sports" data-bet-selection="${item.label}" data-bet-odds="${item.odds}">
                             <span class="odd-label">${item.label}</span>
                             <span class="odd-value tabular-nums">@${Number(item.odds).toFixed(2)}</span>
                           </button>
                         `;
                       })
                       .join('')}
-                    <button type="button" class="odd-button ${isSel('Ambas Marcam', 'Ambas Marcam: Sim') ? 'selected' : ''}"
+                    <button type="button" class="odd-button ${isSel('Ambos Vencem Mapa', 'Ambos Vencem Mapa: Sim') ? 'selected' : ''}"
                       data-bet-match="${m.id}" data-bet-label="${m.home_team_name} vs ${m.away_team_name}"
-                      data-bet-market="Ambas Marcam" data-bet-selection="Ambas Marcam: Sim" data-bet-odds="${btts.yes}">
-                      <span class="odd-label">Ambas: Sim</span>
+                      data-bet-market="Ambos Vencem Mapa" data-bet-selection="Ambos Vencem Mapa: Sim" data-bet-odds="${btts.yes}">
+                      <span class="odd-label">Ambos Mapa: Sim</span>
                       <span class="odd-value tabular-nums">@${Number(btts.yes).toFixed(2)}</span>
                     </button>
                   </div>
@@ -434,10 +436,10 @@
             <!-- Rodapé Limpo do Card -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid var(--md-sys-color-outline-variant);">
               <button type="button" class="md3-btn md3-btn-outlined md3-btn-sm" data-toggle-markets="${m.id}">
-                ${isDrawerOpen ? '▲ Ocultar Mercados Extras' : '▼ +5 Mercados (Handicap & Gols)'}
+                ${isDrawerOpen ? '▲ Ocultar Mercados Extras' : '▼ +5 Mercados (Mapas & Rounds)'}
               </button>
               <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-sync-match="${m.id}">
-                ⚽ Simular Gol Oficial
+                🎮 Simular Round / Kill
               </button>
             </div>
           </article>
@@ -587,14 +589,14 @@
 
     box.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <strong style="font-size: 0.85rem;">Premiação Líquida Automática (90% Pool):</strong>
+        <strong style="font-size: 0.85rem;">Prize Pool Líquido Automático (90% Custódia PIX):</strong>
         <span class="md3-badge badge-success tabular-nums">${formatBRL(net)}</span>
       </div>
       <div class="md3-grid-4" style="font-size: 0.78rem;">
         <div>🥇 1º (60%): <strong class="tabular-nums">${formatBRL(net * 0.6)}</strong></div>
         <div>🥈 2º (25%): <strong class="tabular-nums">${formatBRL(net * 0.25)}</strong></div>
         <div>🥉 3º (10%): <strong class="tabular-nums">${formatBRL(net * 0.1)}</strong></div>
-        <div>⚽ Craque (5%): <strong class="tabular-nums">${formatBRL(net * 0.05)}</strong></div>
+        <div>🌟 MVP HLTV/VCT (5%): <strong class="tabular-nums">${formatBRL(net * 0.05)}</strong></div>
       </div>
     `;
   }
@@ -637,21 +639,22 @@
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <h3 style="margin: 0; font-size: 1.2rem;">${tr.name}</h3>
+                  <span class="md3-badge badge-neutral">${tr.sport}</span>
                   <span class="md3-badge badge-success">${tr.format}</span>
-                  <span class="md3-badge badge-neutral">${tr.registered_teams_count}/${tr.max_teams} Clubes</span>
+                  <span class="md3-badge badge-neutral">${tr.registered_teams_count}/${tr.max_teams} Orgs</span>
                 </div>
                 <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-                  Feed Oficial: <strong>${tr.official_data_source}</strong> • Desempate: <strong>${(tr.tiebreakerRules || []).join(' > ')}</strong>
+                  Telemetria Oficial: <strong>${tr.official_data_source}</strong> • Desempate: <strong>${(tr.tiebreakerRules || []).join(' > ')}</strong>
                 </p>
               </div>
               <button type="button" class="md3-btn md3-btn-tonal md3-btn-sm" data-invite-trn="${tr.id}">
-                ✉️ Convidar Clube &amp; Inscrição PIX (${formatBRL(tr.entry_fee)})
+                ✉️ Convidar Org &amp; Inscrição PIX (${formatBRL(tr.entry_fee)})
               </button>
             </div>
 
             <div class="md3-grid-4" style="background: var(--md-sys-color-surface-container); padding: 14px; border-radius: 14px; font-size: 0.84rem;">
               <div>Inscrição: <strong class="tabular-nums">${formatBRL(tr.entry_fee)}</strong></div>
-              <div>Pool Líquido: <strong class="tabular-nums" style="color: var(--md-sys-color-primary);">${formatBRL(tr.prize_pool_net)}</strong></div>
+              <div>Prize Pool Líquido: <strong class="tabular-nums" style="color: var(--md-sys-color-primary);">${formatBRL(tr.prize_pool_net)}</strong></div>
               <div>🥇 Campeão (60%): <strong class="tabular-nums">${formatBRL(dist.champion1st?.amount || tr.prize_pool_net * 0.6)}</strong></div>
               <div>🥈 Vice (25%): <strong class="tabular-nums">${formatBRL(dist.runnerUp2nd?.amount || tr.prize_pool_net * 0.25)}</strong></div>
             </div>
@@ -661,13 +664,13 @@
                 <thead>
                   <tr>
                     <th>Pos</th>
-                    <th>Clube</th>
+                    <th>Organização (Org)</th>
                     <th>PTS</th>
-                    <th>J</th>
+                    <th>Séries</th>
                     <th>V</th>
                     <th>E</th>
                     <th>D</th>
-                    <th>GP:GC (SG)</th>
+                    <th>Mapas (Saldo)</th>
                     <th>Forma Recente</th>
                   </tr>
                 </thead>
@@ -694,18 +697,21 @@
             <div style="display: flex; align-items: center; gap: 12px;">
               <span class="team-avatar">${t.short_name}</span>
               <div>
-                <strong style="font-size: 1.05rem;">${t.name}</strong>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="font-size: 1.05rem;">${t.name}</strong>
+                  <span class="md3-badge badge-neutral">${t.sport}</span>
+                </div>
                 <div style="font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant);">
-                  ${t.city}/${t.state} • ${t.stadium} • Técnico: ${t.coach_name}
+                  ${t.city}/${t.state} • ${t.stadium} • Coach: ${t.coach_name}
                 </div>
               </div>
             </div>
-            <span class="md3-badge badge-success tabular-nums">Elo ${t.elo_rating}</span>
+            <span class="md3-badge badge-success tabular-nums">Rating ${t.elo_rating}</span>
           </div>
 
           <div style="font-size: 0.8rem; display: flex; gap: 14px; flex-wrap: wrap;">
-            <span>🏆 <strong>${t.history.nationalTitles || 0} Títulos Nacionais</strong></span>
-            <span>📊 Campanha: <strong>${t.stats.wins}V ${t.stats.draws}E ${t.stats.losses}D (${t.stats.goalsFor} GP)</strong></span>
+            <span>🏆 <strong>${t.history.nationalTitles || 0} Títulos Oficiais</strong></span>
+            <span>📊 Histórico MD3: <strong>${t.stats.wins}V ${t.stats.losses}D (${t.stats.goalsFor} Mapas Vencidos)</strong></span>
           </div>
 
           <div class="md3-table-wrap">
@@ -713,10 +719,10 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Atleta do Elenco</th>
-                  <th>Posição</th>
-                  <th>OVR</th>
-                  <th>Desempenho</th>
+                  <th>Pro-Player (Nick &amp; Nome)</th>
+                  <th>Role / Função</th>
+                  <th>Rating</th>
+                  <th>Kills / Assists</th>
                 </tr>
               </thead>
               <tbody>
@@ -728,7 +734,7 @@
                     <td><strong>${p.name}</strong></td>
                     <td>${p.position}</td>
                     <td class="tabular-nums"><span class="md3-badge badge-neutral">${p.rating}</span></td>
-                    <td class="tabular-nums">${p.goals}G / ${p.assists}A</td>
+                    <td class="tabular-nums">${p.goals}K / ${p.assists}A</td>
                   </tr>
                 `
                   )
@@ -762,8 +768,8 @@
             <span class="md3-badge badge-success">HOMOLOGADA</span>
           </div>
           <div style="font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);">
-            <div>Presidência / Diretoria: <strong>${f.president_name}</strong></div>
-            <div>Integração Oficial de Súmulas: <strong class="mono-code">${f.official_feed_provider}</strong></div>
+            <div>Diretoria Competitiva: <strong>${f.president_name}</strong></div>
+            <div>Integração de Telemetria: <strong class="mono-code">${f.official_feed_provider}</strong></div>
           </div>
         </div>
       `
@@ -1379,7 +1385,7 @@
         return;
       }
 
-      // 7. Convidar Clube & Inscrição PIX
+      // 7. Convidar Organização (Org) & Inscrição PIX
       const inviteBtn = ev.target.closest('[data-invite-trn]');
       if (inviteBtn) {
         const trnId = inviteBtn.getAttribute('data-invite-trn');
@@ -1387,8 +1393,8 @@
           const res = await apiRequest(`/api/tournaments/${trnId}/invite`, {
             method: 'POST',
             body: JSON.stringify({
-              teamName: 'Red Bull Bragantino',
-              invitedEmail: 'inscricao@redbullbragantino.com.br',
+              teamName: 'Legacy Esports',
+              invitedEmail: 'competitivo@legacy.gg',
               payEntryWithPix: true
             })
           });
@@ -1425,7 +1431,7 @@
           const res = await apiRequest(`/api/admin/support/${ticketId}/resolve`, {
             method: 'POST',
             body: JSON.stringify({
-              resolutionNote: 'Documentação e súmula validadas com sucesso pelo painel administrativo.'
+              resolutionNote: 'Documentação e logs de telemetria homologados com sucesso pelo painel administrativo.'
             })
           });
           await loadBootstrap(state.currentUser?.id);
@@ -1537,18 +1543,18 @@
       formTeam.addEventListener('submit', async (ev) => {
         ev.preventDefault();
         try {
-          const starPlayer = document.getElementById('team-star-player-input').value || 'Craque Camisa 10';
+          const starPlayer = document.getElementById('team-star-player-input').value || 'coldzera (Star IGL)';
           const res = await apiRequest('/api/teams', {
             method: 'POST',
             body: JSON.stringify({
               name: document.getElementById('team-name-input').value,
               shortName: document.getElementById('team-short-input').value,
               stadium: document.getElementById('team-stadium-input').value,
-              coachName: document.getElementById('team-coach-input').value || 'Treinador Titular',
+              coachName: document.getElementById('team-coach-input').value || 'Head Coach Titular',
               roster: [
-                { number: 1, name: 'Goleiro Titular', position: 'Goleiro', age: 27, rating: 83, goals: 0, assists: 0 },
-                { number: 10, name: starPlayer, position: 'Meia-Atacante', age: 26, rating: 87, goals: 12, assists: 11 },
-                { number: 9, name: 'Centroavante Oficial', position: 'Atacante', age: 25, rating: 85, goals: 15, assists: 4 }
+                { number: 1, name: starPlayer, position: 'IGL & AWPer', age: 25, rating: 1.21, goals: 460, assists: 135 },
+                { number: 2, name: 'Entry Fragger Titular', position: 'Entry / Duelist', age: 21, rating: 1.17, goals: 430, assists: 98 },
+                { number: 3, name: 'Rifler / Lurker Oficial', position: 'Rifler / Anchor', age: 22, rating: 1.14, goals: 410, assists: 112 }
               ]
             })
           });

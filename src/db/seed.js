@@ -5,8 +5,34 @@ const { recordFinancialTransaction, calculateTournamentPrizePool } = require('./
 
 function seedDatabaseIfNeeded(db) {
   const existingUsers = db.prepare('SELECT COUNT(*) as c FROM users').get();
-  if (existingUsers && existingUsers.c > 0) {
+  const existingEsportsFeds = db
+    .prepare("SELECT COUNT(*) as c FROM federations WHERE sport IN ('CS2', 'Valorant', 'League of Legends')")
+    .get();
+
+  // Se já existe banco com os dados de E-Sports, não recria
+  if (existingUsers && existingUsers.c > 0 && existingEsportsFeds && existingEsportsFeds.c > 0) {
     return;
+  }
+
+  // Se existia um banco legado (futebol), limpa as tabelas de catálogo para aplicar o seed E-Sports First mantendo integridade
+  if (existingUsers && existingUsers.c > 0 && (!existingEsportsFeds || existingEsportsFeds.c === 0)) {
+    db.exec(`
+      DELETE FROM prediction_purchases;
+      DELETE FROM predictions;
+      DELETE FROM tipster_stats;
+      DELETE FROM bets;
+      DELETE FROM matches;
+      DELETE FROM tournament_invitations;
+      DELETE FROM tournaments;
+      DELETE FROM teams;
+      DELETE FROM federations;
+      DELETE FROM notifications;
+      DELETE FROM support_tickets;
+      DELETE FROM disciplinary_actions;
+      DELETE FROM financial_transactions;
+      DELETE FROM immutable_ledger;
+      DELETE FROM users;
+    `);
   }
 
   const now = new Date().toISOString();
@@ -34,7 +60,7 @@ function seedDatabaseIfNeeded(db) {
   const users = [
     {
       id: 'usr-admin-01',
-      name: 'Lucas Fortunato (Super Admin)',
+      name: 'Lucas Fortunato (Super Admin • Head of Esports)',
       email: 'admin@campeonei.com.br',
       role: 'super_admin',
       cpf: '52998224725',
@@ -47,7 +73,7 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       id: 'usr-mod-01',
-      name: 'Marina Costa (Moderadora de Ligas)',
+      name: 'Marina Costa (Head Marshal & Moderadora de Torneios)',
       email: 'moderacao@campeonei.com.br',
       role: 'moderator',
       cpf: '11144477735',
@@ -60,7 +86,7 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       id: 'usr-fin-01',
-      name: 'Roberto Almeida (Analista Financeiro PLD)',
+      name: 'Roberto Almeida (Analista Financeiro PLD/PIX)',
       email: 'financeiro@campeonei.com.br',
       role: 'financial_analyst',
       cpf: '12345678909',
@@ -73,7 +99,7 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       id: 'usr-pro-01',
-      name: 'Rafael Mendonça (Tipster & Organizador)',
+      name: 'Rafael "QuantCS" Mendonça (Pro Tipster & Analista Esports)',
       email: 'rafael@campeonei.com.br',
       role: 'user',
       cpf: '98765432100',
@@ -86,7 +112,7 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       id: 'usr-pending-kyc',
-      name: 'Carlos Eduardo (KYC Pendente)',
+      name: 'Carlos Eduardo (Player Amador • KYC Pendente)',
       email: 'carlos.pendente@campeonei.com.br',
       role: 'user',
       cpf: '70548445052',
@@ -99,12 +125,12 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       id: 'usr-insider-01',
-      name: 'Gabriel Silva (Atleta Federado CBF - Impedido)',
-      email: 'atleta.cbf@campeonei.com.br',
+      name: 'Gabriel "kNgV" Silva (Pro Player Inscrito CBCS - Impedido)',
+      email: 'proplayer.cbcs@campeonei.com.br',
       role: 'user',
       cpf: '28625587087',
       phone: '+5511955443322',
-      pixKey: 'gabriel@atleta.com.br',
+      pixKey: 'gabriel@proplayer.com.br',
       kycStatus: 'VERIFIED',
       mfaEnabled: 1,
       walletBalance: 1000.0,
@@ -158,59 +184,59 @@ function seedDatabaseIfNeeded(db) {
     );
   }
 
-  // 2. Federações Esportivas
+  // 2. Federações e Ligas Oficiais de E-Sports
   const federations = [
     {
       id: 'fed-cbf',
-      acronym: 'CBF',
-      name: 'Confederação Brasileira de Futebol',
-      sport: 'Futebol',
+      acronym: 'CBGE',
+      name: 'Confederação Brasileira de Games e Esports (Circuito Nacional CS2)',
+      sport: 'CS2',
       country: 'Brasil',
-      state: 'Nacional (RJ)',
-      president_name: 'Ednaldo Rodrigues / Diretoria Técnica',
-      official_website: 'https://www.cbf.com.br',
-      official_feed_provider: 'CBF Opta / Sportradar Official Feed v4',
+      state: 'Nacional (SP)',
+      president_name: 'Paulo Ribas / Diretoria Competitiva CBGE',
+      official_website: 'https://cbge.com.br',
+      official_feed_provider: 'Valve CS2 GSI + GRID Esports Telemetry v4',
       verified_badge: 1,
-      logo_color: '#006C4C'
+      logo_color: '#00E699'
     },
     {
       id: 'fed-fpf',
-      acronym: 'FPF',
-      name: 'Federação Paulista de Futebol & Ligas Regionais',
-      sport: 'Futebol',
+      acronym: 'VCT-BR',
+      name: 'Riot Games Brasil • VALORANT Challengers & Americas League',
+      sport: 'Valorant',
       country: 'Brasil',
       state: 'SP',
-      president_name: 'Reinaldo Carneiro Bastos',
-      official_website: 'https://futebolpaulista.com.br',
-      official_feed_provider: 'FPF Live Data API',
+      president_name: 'Carlos Antunes (Head of Esports Riot BR)',
+      official_website: 'https://valorantesports.com',
+      official_feed_provider: 'Riot Games VCT Live Data Feed API',
       verified_badge: 1,
-      logo_color: '#1E5631'
+      logo_color: '#FF4655'
     },
     {
       id: 'fed-lnb',
-      acronym: 'LNB',
-      name: 'Liga Nacional de Basquete (NBB)',
-      sport: 'Basquete',
+      acronym: 'CBLOL',
+      name: 'Liga Brasileira de League of Legends (LTA Sul / Riot Games)',
+      sport: 'League of Legends',
       country: 'Brasil',
       state: 'Nacional (SP)',
-      president_name: 'Rodrigo Franco Montoro',
-      official_website: 'https://lnb.com.br',
-      official_feed_provider: 'FIBA Genius Sports LiveStats',
+      president_name: 'Igor Corrêa (Comissão Técnica LTA Sul)',
+      official_website: 'https://lolesports.com',
+      official_feed_provider: 'Riot LoL Esports Official LiveStats API',
       verified_badge: 1,
-      logo_color: '#B4690E'
+      logo_color: '#C89B3C'
     },
     {
       id: 'fed-cbv',
-      acronym: 'CBV',
-      name: 'Confederação Brasileira de Voleibol (Superliga)',
-      sport: 'Vôlei',
+      acronym: 'BR6',
+      name: 'Circuito Brasileiro de Rainbow Six Siege & FPS Tático (Ubisoft)',
+      sport: 'Rainbow Six',
       country: 'Brasil',
-      state: 'Nacional (RJ)',
-      president_name: 'Radamés Lattari',
-      official_website: 'https://cbv.com.br',
-      official_feed_provider: 'CBV DataVolley Real-Time',
+      state: 'Nacional (SP)',
+      president_name: 'Leandro Montoya (Diretor R6 Esports Latam)',
+      official_website: 'https://r6esports.com.br',
+      official_feed_provider: 'Ubisoft R6 Matchmaking & Server Telemetry',
       verified_badge: 1,
-      logo_color: '#0F52BA'
+      logo_color: '#3B82F6'
     }
   ];
 
@@ -238,193 +264,196 @@ function seedDatabaseIfNeeded(db) {
     );
   }
 
-  // 3. Times com Elenco Completo, Estatísticas e Histórico
+  // 3. Organizações de E-Sports (Orgs) com Line-up Completo, Roles, Rating e Histórico de Títulos
   const teams = [
     {
       id: 'team-pal',
       federation_id: 'fed-cbf',
-      name: 'SE Palmeiras',
-      short_name: 'PAL',
-      sport: 'Futebol',
+      name: 'FURIA Esports',
+      short_name: 'FUR',
+      sport: 'CS2',
       city: 'São Paulo',
       state: 'SP',
-      founded_year: 1914,
-      stadium: 'Allianz Parque',
-      coach_name: 'Abel Ferreira',
-      primary_color: '#006437',
-      secondary_color: '#FFFFFF',
-      elo_rating: 1910,
+      founded_year: 2017,
+      stadium: 'Gaming Office SP / Arena CBCS',
+      coach_name: 'sidde (Sid Macedo)',
+      primary_color: '#00E699',
+      secondary_color: '#111111',
+      elo_rating: 1945,
       roster: [
-        { number: 21, name: 'Weverton', position: 'Goleiro', age: 36, rating: 85, goals: 0, assists: 1 },
-        { number: 15, name: 'Gustavo Gómez', position: 'Zagueiro', age: 31, rating: 86, goals: 4, assists: 1 },
-        { number: 23, name: 'Raphael Veiga', position: 'Meia', age: 29, rating: 88, goals: 14, assists: 11 },
-        { number: 41, name: 'Estêvão Willian', position: 'Atacante', age: 19, rating: 89, goals: 16, assists: 12 },
-        { number: 9, name: 'Vitor Roque', position: 'Atacante', age: 21, rating: 86, goals: 12, assists: 4 }
+        { number: 1, name: 'FalleN (Gabriel Toledo)', position: 'IGL & AWPer', age: 33, rating: 1.14, goals: 412, assists: 145 },
+        { number: 2, name: 'KSCERATO (Kaike Cerato)', position: 'Rifler / Lurker', age: 25, rating: 1.24, goals: 528, assists: 112 },
+        { number: 3, name: 'yuurih (Yuri Santos)', position: 'Rifler / Entry', age: 25, rating: 1.19, goals: 489, assists: 134 },
+        { number: 4, name: 'chelo (Marcelo Cespedes)', position: 'Entry Fragger', age: 26, rating: 1.09, goals: 405, assists: 98 },
+        { number: 5, name: 'skullz (Felipe Medeiros)', position: 'Anchor / Support', age: 22, rating: 1.08, goals: 376, assists: 121 }
       ],
-      stats: { played: 32, wins: 21, draws: 7, losses: 4, goalsFor: 58, goalsAgainst: 24, form: ['V', 'V', 'E', 'V', 'V'] },
-      history: { nationalTitles: 12, continentalTitles: 3, lastChampionYear: 2025 }
+      stats: { played: 28, wins: 22, draws: 0, losses: 6, goalsFor: 52, goalsAgainst: 21, form: ['V', 'V', 'V', 'D', 'V'] },
+      history: { nationalTitles: 8, continentalTitles: 5, lastChampionYear: 2025 }
     },
     {
       id: 'team-fla',
       federation_id: 'fed-cbf',
-      name: 'CR Flamengo',
-      short_name: 'FLA',
-      sport: 'Futebol',
-      city: 'Rio de Janeiro',
-      state: 'RJ',
-      founded_year: 1895,
-      stadium: 'Maracanã',
-      coach_name: 'Filipe Luís',
-      primary_color: '#C8102E',
-      secondary_color: '#111111',
-      elo_rating: 1905,
+      name: 'Imperial Esports',
+      short_name: 'IMP',
+      sport: 'CS2',
+      city: 'São Paulo',
+      state: 'SP',
+      founded_year: 2018,
+      stadium: 'Imperial Gaming House SP',
+      coach_name: 'zakk (Rafael Fernandes)',
+      primary_color: '#10B981',
+      secondary_color: '#0B1512',
+      elo_rating: 1910,
       roster: [
-        { number: 1, name: 'Agustín Rossi', position: 'Goleiro', age: 29, rating: 85, goals: 0, assists: 0 },
-        { number: 4, name: 'Léo Pereira', position: 'Zagueiro', age: 28, rating: 84, goals: 3, assists: 1 },
-        { number: 8, name: 'Gerson Santos', position: 'Meia', age: 27, rating: 87, goals: 6, assists: 9 },
-        { number: 14, name: 'De Arrascaeta', position: 'Meia', age: 30, rating: 89, goals: 11, assists: 14 },
-        { number: 9, name: 'Pedro Guilherme', position: 'Atacante', age: 27, rating: 88, goals: 21, assists: 5 }
+        { number: 1, name: 'VINI (Vinicius Figueiredo)', position: 'IGL / Rifler', age: 25, rating: 1.09, goals: 398, assists: 140 },
+        { number: 2, name: 'HEN1 (Henrique Teles)', position: 'AWPer', age: 29, rating: 1.16, goals: 455, assists: 88 },
+        { number: 3, name: 'felps (João Vasconcellos)', position: 'Entry Fragger', age: 27, rating: 1.15, goals: 468, assists: 104 },
+        { number: 4, name: 'decenty (Lucas Bacelar)', position: 'Rifler / Lurker', age: 20, rating: 1.13, goals: 430, assists: 92 },
+        { number: 5, name: 'noway (Kaiky Santos)', position: 'Rifler', age: 19, rating: 1.12, goals: 419, assists: 96 }
       ],
-      stats: { played: 32, wins: 20, draws: 7, losses: 5, goalsFor: 61, goalsAgainst: 28, form: ['V', 'E', 'V', 'V', 'D'] },
-      history: { nationalTitles: 8, continentalTitles: 3, lastChampionYear: 2024 }
+      stats: { played: 28, wins: 20, draws: 0, losses: 8, goalsFor: 47, goalsAgainst: 25, form: ['V', 'V', 'D', 'V', 'V'] },
+      history: { nationalTitles: 6, continentalTitles: 2, lastChampionYear: 2025 }
     },
     {
       id: 'team-bot',
-      federation_id: 'fed-cbf',
-      name: 'Botafogo FR',
-      short_name: 'BOT',
-      sport: 'Futebol',
-      city: 'Rio de Janeiro',
-      state: 'RJ',
-      founded_year: 1904,
-      stadium: 'Nilton Santos',
-      coach_name: 'Artur Jorge',
-      primary_color: '#1C1C1C',
-      secondary_color: '#FFFFFF',
-      elo_rating: 1890,
+      federation_id: 'fed-fpf',
+      name: 'LOUD Valorant',
+      short_name: 'LLL',
+      sport: 'Valorant',
+      city: 'São Paulo',
+      state: 'SP',
+      founded_year: 2019,
+      stadium: 'Riot Games Arena SP',
+      coach_name: 'peu (Pedro Lopes)',
+      primary_color: '#00FF66',
+      secondary_color: '#0A0F0D',
+      elo_rating: 1935,
       roster: [
-        { number: 12, name: 'John Victor', position: 'Goleiro', age: 28, rating: 84, goals: 0, assists: 0 },
-        { number: 20, name: 'Alexander Barboza', position: 'Zagueiro', age: 29, rating: 84, goals: 2, assists: 1 },
-        { number: 10, name: 'Jefferson Savarino', position: 'Meia', age: 28, rating: 86, goals: 10, assists: 11 },
-        { number: 11, name: 'Júnior Santos', position: 'Atacante', age: 30, rating: 85, goals: 13, assists: 4 },
-        { number: 99, name: 'Igor Jesus', position: 'Atacante', age: 24, rating: 86, goals: 14, assists: 6 }
+        { number: 1, name: 'Less (Felipe Basso)', position: 'Sentinel (Viper/Killjoy)', age: 20, rating: 1.22, goals: 495, assists: 130 },
+        { number: 2, name: 'cauanzin (Cauan Pereira)', position: 'Initiator (Sova/Fade)', age: 19, rating: 1.17, goals: 448, assists: 210 },
+        { number: 3, name: 'tuyz (Arthur Vieira)', position: 'Controller (Omen/Astra)', age: 21, rating: 1.11, goals: 390, assists: 245 },
+        { number: 4, name: 'pANcada (Bryan Luna)', position: 'Controller / Anchor', age: 25, rating: 1.12, goals: 402, assists: 220 },
+        { number: 5, name: 'dgzin (Douglas Silva)', position: 'Duelist (Jett/Raze)', age: 23, rating: 1.18, goals: 475, assists: 95 }
       ],
-      stats: { played: 32, wins: 19, draws: 8, losses: 5, goalsFor: 54, goalsAgainst: 26, form: ['V', 'V', 'E', 'E', 'V'] },
-      history: { nationalTitles: 3, continentalTitles: 1, lastChampionYear: 2024 }
+      stats: { played: 24, wins: 19, draws: 0, losses: 5, goalsFor: 42, goalsAgainst: 16, form: ['V', 'V', 'V', 'V', 'D'] },
+      history: { nationalTitles: 5, continentalTitles: 2, worldTitles: 1, lastChampionYear: 2025 }
     },
     {
       id: 'team-for',
-      federation_id: 'fed-cbf',
-      name: 'Fortaleza EC',
-      short_name: 'FOR',
-      sport: 'Futebol',
-      city: 'Fortaleza',
-      state: 'CE',
-      founded_year: 1918,
-      stadium: 'Arena Castelão',
-      coach_name: 'Juan Pablo Vojvoda',
-      primary_color: '#0038A8',
-      secondary_color: '#CE1126',
-      elo_rating: 1855,
+      federation_id: 'fed-fpf',
+      name: 'MIBR Valorant',
+      short_name: 'MIBR',
+      sport: 'Valorant',
+      city: 'São Paulo',
+      state: 'SP',
+      founded_year: 2003,
+      stadium: 'MIBR Raposa Facility SP',
+      coach_name: 'fRoD (Danny Montaner)',
+      primary_color: '#F59E0B',
+      secondary_color: '#1E293B',
+      elo_rating: 1900,
       roster: [
-        { number: 1, name: 'João Ricardo', position: 'Goleiro', age: 35, rating: 83, goals: 0, assists: 0 },
-        { number: 19, name: 'Emanuel Brítez', position: 'Zagueiro', age: 32, rating: 81, goals: 1, assists: 2 },
-        { number: 88, name: 'Lucas Sasha', position: 'Volante', age: 34, rating: 81, goals: 2, assists: 3 },
-        { number: 7, name: 'Tomás Pochettino', position: 'Meia', age: 28, rating: 84, goals: 7, assists: 10 },
-        { number: 9, name: 'Juan Martín Lucero', position: 'Atacante', age: 32, rating: 85, goals: 15, assists: 4 }
+        { number: 1, name: 'aspas (Erick Santos)', position: 'Duelist (Jett/Neon)', age: 21, rating: 1.29, goals: 560, assists: 108 },
+        { number: 2, name: 'nzr (Agustin Ibarra)', position: 'IGL / Initiator', age: 25, rating: 1.10, goals: 385, assists: 230 },
+        { number: 3, name: 'artzin (Arthur Araujo)', position: 'Flex / Initiator', age: 21, rating: 1.11, goals: 410, assists: 165 },
+        { number: 4, name: 'cortezia (Gabriel Cortez)', position: 'Sentinel (Cypher)', age: 20, rating: 1.09, goals: 395, assists: 140 },
+        { number: 5, name: 'xenom (Eduardo Soeiro)', position: 'Controller (Omen)', age: 20, rating: 1.08, goals: 370, assists: 255 }
       ],
-      stats: { played: 32, wins: 17, draws: 9, losses: 6, goalsFor: 47, goalsAgainst: 29, form: ['E', 'V', 'V', 'D', 'V'] },
-      history: { nationalTitles: 0, regionalTitles: 46, lastChampionYear: 2024 }
+      stats: { played: 24, wins: 17, draws: 0, losses: 7, goalsFor: 38, goalsAgainst: 20, form: ['V', 'D', 'V', 'V', 'V'] },
+      history: { nationalTitles: 4, continentalTitles: 3, lastChampionYear: 2024 }
     },
     {
       id: 'team-spfc',
-      federation_id: 'fed-fpf',
-      name: 'São Paulo FC',
-      short_name: 'SAO',
-      sport: 'Futebol',
+      federation_id: 'fed-lnb',
+      name: 'paiN Gaming',
+      short_name: 'PAIN',
+      sport: 'League of Legends',
       city: 'São Paulo',
       state: 'SP',
-      founded_year: 1930,
-      stadium: 'MorumBIS',
-      coach_name: 'Luis Zubeldía',
-      primary_color: '#D50000',
-      secondary_color: '#000000',
-      elo_rating: 1848,
+      founded_year: 2010,
+      stadium: 'paiN Gaming Complex SP',
+      coach_name: 'Xero (Sin Yeong-jin)',
+      primary_color: '#EF4444',
+      secondary_color: '#111111',
+      elo_rating: 1925,
       roster: [
-        { number: 23, name: 'Rafael Pires', position: 'Goleiro', age: 34, rating: 83, goals: 0, assists: 0 },
-        { number: 5, name: 'Arboleda', position: 'Zagueiro', age: 32, rating: 84, goals: 3, assists: 0 },
-        { number: 7, name: 'Lucas Moura', position: 'Meia-Atacante', age: 32, rating: 87, goals: 12, assists: 9 },
-        { number: 10, name: 'Luciano Neves', position: 'Atacante', age: 31, rating: 84, goals: 13, assists: 3 },
-        { number: 9, name: 'Jonathan Calleri', position: 'Atacante', age: 31, rating: 85, goals: 14, assists: 5 }
+        { number: 1, name: 'Wizer (Choi Ui-seok)', position: 'Top Laner', age: 26, rating: 91, goals: 142, assists: 265 },
+        { number: 2, name: 'Cariok (Marcos Oliveira)', position: 'Jungler', age: 24, rating: 90, goals: 118, assists: 340 },
+        { number: 3, name: 'dyNquedo (Matheus Rossini)', position: 'Mid Laner', age: 26, rating: 91, goals: 175, assists: 290 },
+        { number: 4, name: 'TitaN (Alexandre Lima)', position: 'Bot / ADC', age: 24, rating: 93, goals: 248, assists: 195 },
+        { number: 5, name: 'Kuri (Choi Won-yeong)', position: 'Support', age: 24, rating: 89, goals: 34, assists: 460 }
       ],
-      stats: { played: 32, wins: 16, draws: 8, losses: 8, goalsFor: 45, goalsAgainst: 30, form: ['V', 'D', 'V', 'E', 'V'] },
-      history: { nationalTitles: 6, continentalTitles: 3, worldTitles: 3 }
+      stats: { played: 22, wins: 18, draws: 0, losses: 4, goalsFor: 39, goalsAgainst: 14, form: ['V', 'V', 'V', 'V', 'D'] },
+      history: { nationalTitles: 4, continentalTitles: 1, lastChampionYear: 2024 }
     },
     {
       id: 'team-cor',
-      federation_id: 'fed-fpf',
-      name: 'SC Corinthians Paulista',
-      short_name: 'COR',
-      sport: 'Futebol',
+      federation_id: 'fed-lnb',
+      name: 'RED Canids Kalunga',
+      short_name: 'RED',
+      sport: 'League of Legends',
       city: 'São Paulo',
       state: 'SP',
-      founded_year: 1910,
-      stadium: 'Neo Química Arena',
-      coach_name: 'Ramón Díaz',
-      primary_color: '#1F1F1F',
-      secondary_color: '#C5A059',
-      elo_rating: 1840,
+      founded_year: 2016,
+      stadium: 'RED Gaming House SP',
+      coach_name: 'Coelho (Ramide Coelho)',
+      primary_color: '#DC2626',
+      secondary_color: '#FFFFFF',
+      elo_rating: 1885,
       roster: [
-        { number: 1, name: 'Hugo Souza', position: 'Goleiro', age: 25, rating: 84, goals: 0, assists: 0 },
-        { number: 10, name: 'Rodrigo Garro', position: 'Meia', age: 26, rating: 87, goals: 11, assists: 13 },
-        { number: 9, name: 'Yuri Alberto', position: 'Atacante', age: 23, rating: 85, goals: 18, assists: 6 },
-        { number: 94, name: 'Memphis Depay', position: 'Atacante', age: 30, rating: 87, goals: 10, assists: 8 }
+        { number: 1, name: 'fNb (Francisco Natanael)', position: 'Top Laner', age: 23, rating: 89, goals: 129, assists: 240 },
+        { number: 2, name: 'Aegis (Gabriel Lemos)', position: 'Jungler', age: 25, rating: 91, goals: 135, assists: 325 },
+        { number: 3, name: 'Grevthar (Daniel Xavier)', position: 'Mid Laner', age: 25, rating: 88, goals: 140, assists: 280 },
+        { number: 4, name: 'Brance (Diego Amaral)', position: 'Bot / ADC', age: 21, rating: 92, goals: 232, assists: 185 },
+        { number: 5, name: 'Frosty (José Eduardo)', position: 'Support', age: 22, rating: 88, goals: 28, assists: 415 }
       ],
-      stats: { played: 32, wins: 14, draws: 9, losses: 9, goalsFor: 44, goalsAgainst: 33, form: ['V', 'V', 'V', 'E', 'V'] },
-      history: { nationalTitles: 7, continentalTitles: 1, worldTitles: 2 }
+      stats: { played: 22, wins: 15, draws: 0, losses: 7, goalsFor: 34, goalsAgainst: 19, form: ['V', 'V', 'D', 'V', 'V'] },
+      history: { nationalTitles: 3, continentalTitles: 0, lastChampionYear: 2023 }
     },
     {
       id: 'team-franca',
-      federation_id: 'fed-lnb',
-      name: 'Sesi Franca Basquete',
-      short_name: 'FRA',
-      sport: 'Basquete',
-      city: 'Franca',
+      federation_id: 'fed-cbf',
+      name: 'Fluxo Esports',
+      short_name: 'FX',
+      sport: 'CS2',
+      city: 'São Paulo',
       state: 'SP',
-      founded_year: 1959,
-      stadium: 'Ginásio Pedrocão',
-      coach_name: 'Helinho Garcia',
-      primary_color: '#0D3B66',
-      secondary_color: '#E63946',
-      elo_rating: 1880,
+      founded_year: 2021,
+      stadium: 'Arena Fluxo SP',
+      coach_name: 'zews (Wilton Prado)',
+      primary_color: '#8B5CF6',
+      secondary_color: '#1E1B4B',
+      elo_rating: 1875,
       roster: [
-        { number: 14, name: 'Georginho de Paula', position: 'Armador', age: 28, rating: 88, goals: 420, assists: 190 },
-        { number: 9, name: 'Lucas Dias', position: 'Ala-Pivô', age: 29, rating: 89, goals: 510, assists: 95 },
-        { number: 32, name: 'David Jackson', position: 'Ala-Armador', age: 41, rating: 86, goals: 380, assists: 110 }
+        { number: 1, name: 'arT (Andrei Piovezan)', position: 'IGL & Entry', age: 28, rating: 1.07, goals: 390, assists: 155 },
+        { number: 2, name: 'zevy (Romeu Rocco)', position: 'AWPer', age: 23, rating: 1.15, goals: 442, assists: 84 },
+        { number: 3, name: 'Lucaozy (Lucas Neves)', position: 'Rifler / Star', age: 22, rating: 1.18, goals: 470, assists: 105 },
+        { number: 4, name: 'nicks (Nicollas Polonio)', position: 'Anchor / Support', age: 19, rating: 1.06, goals: 350, assists: 132 }
       ],
-      stats: { played: 24, wins: 21, draws: 0, losses: 3, goalsFor: 2140, goalsAgainst: 1820, form: ['V', 'V', 'V', 'V', 'D'] },
-      history: { nationalTitles: 14, continentalTitles: 1, worldTitles: 1 }
+      stats: { played: 28, wins: 17, draws: 0, losses: 11, goalsFor: 41, goalsAgainst: 30, form: ['V', 'D', 'V', 'V', 'D'] },
+      history: { nationalTitles: 3, continentalTitles: 1, lastChampionYear: 2024 }
     },
     {
       id: 'team-minas',
       federation_id: 'fed-cbv',
-      name: 'Itambé Minas Tênis Clube',
-      short_name: 'MIN',
-      sport: 'Vôlei',
-      city: 'Belo Horizonte',
-      state: 'MG',
-      founded_year: 1935,
-      stadium: 'Arena UniBH',
-      coach_name: 'Nicola Negro',
-      primary_color: '#003366',
-      secondary_color: '#FFFFFF',
-      elo_rating: 1865,
+      name: 'Team Liquid Brasil',
+      short_name: 'TL',
+      sport: 'Rainbow Six',
+      city: 'São Paulo',
+      state: 'SP',
+      founded_year: 2000,
+      stadium: 'Alienware Training Facility SP',
+      coach_name: 'Hugzord (Hugorocha)',
+      primary_color: '#3B82F6',
+      secondary_color: '#0F172A',
+      elo_rating: 1915,
       roster: [
-        { number: 8, name: 'Kisy Nascimento', position: 'Oposta', age: 25, rating: 88, goals: 315, assists: 20 },
-        { number: 2, name: 'Carol Gattaz / Thaísa', position: 'Central', age: 37, rating: 89, goals: 260, assists: 18 }
+        { number: 1, name: 'Nesk (André Oliveira)', position: 'Entry Fragger', age: 29, rating: 1.21, goals: 315, assists: 88 },
+        { number: 2, name: 'Paluh (Luccas Molina)', position: 'Soft Breacher / Flex', age: 25, rating: 1.25, goals: 340, assists: 112 },
+        { number: 3, name: 'Lagonis (Pablo Oliveira)', position: 'IGL / Hard Support', age: 23, rating: 1.02, goals: 210, assists: 175 }
       ],
-      stats: { played: 18, wins: 16, draws: 0, losses: 2, goalsFor: 50, goalsAgainst: 14, form: ['V', 'V', 'V', 'V', 'V'] },
-      history: { nationalTitles: 6, continentalTitles: 5 }
+      stats: { played: 18, wins: 15, draws: 0, losses: 3, goalsFor: 32, goalsAgainst: 11, form: ['V', 'V', 'V', 'V', 'V'] },
+      history: { nationalTitles: 6, continentalTitles: 3, worldTitles: 1 }
     }
   ];
 
@@ -457,27 +486,27 @@ function seedDatabaseIfNeeded(db) {
     );
   }
 
-  // 4. Campeonatos (Pontos Corridos, Mata-Mata e Grupos + Mata-Mata)
+  // 4. Campeonatos de E-Sports (Pontos Corridos MD3, Playoffs Upper/Lower e Grupos + Playoffs)
   const prize1 = calculateTournamentPrizePool({ entryFee: 5000, maxTeams: 20, platformFeePct: 10 });
   const prize2 = calculateTournamentPrizePool({ entryFee: 2500, maxTeams: 16, platformFeePct: 8 });
   const prize3 = calculateTournamentPrizePool({ entryFee: 1500, maxTeams: 12, platformFeePct: 10 });
 
-  const standingsSerieA = [
-    { pos: 1, teamId: 'team-pal', teamName: 'SE Palmeiras', short: 'PAL', pts: 70, played: 32, wins: 21, draws: 7, losses: 4, gf: 58, ga: 24, gd: 34, form: ['V', 'V', 'E', 'V', 'V'] },
-    { pos: 2, teamId: 'team-fla', teamName: 'CR Flamengo', short: 'FLA', pts: 67, played: 32, wins: 20, draws: 7, losses: 5, gf: 61, ga: 28, gd: 33, form: ['V', 'E', 'V', 'V', 'D'] },
-    { pos: 3, teamId: 'team-bot', teamName: 'Botafogo FR', short: 'BOT', pts: 65, played: 32, wins: 19, draws: 8, losses: 5, gf: 54, ga: 26, gd: 28, form: ['V', 'V', 'E', 'E', 'V'] },
-    { pos: 4, teamId: 'team-for', teamName: 'Fortaleza EC', short: 'FOR', pts: 60, played: 32, wins: 17, draws: 9, losses: 6, gf: 47, ga: 29, gd: 18, form: ['E', 'V', 'V', 'D', 'V'] },
-    { pos: 5, teamId: 'team-spfc', teamName: 'São Paulo FC', short: 'SAO', pts: 56, played: 32, wins: 16, draws: 8, losses: 8, gf: 45, ga: 30, gd: 15, form: ['V', 'D', 'V', 'E', 'V'] },
-    { pos: 6, teamId: 'team-cor', teamName: 'SC Corinthians Paulista', short: 'COR', pts: 51, played: 32, wins: 14, draws: 9, losses: 9, gf: 44, ga: 33, gd: 11, form: ['V', 'V', 'V', 'E', 'V'] }
+  const standingsCs2Elite = [
+    { pos: 1, teamId: 'team-pal', teamName: 'FURIA Esports', short: 'FUR', pts: 66, played: 28, wins: 22, draws: 0, losses: 6, gf: 52, ga: 21, gd: 31, form: ['V', 'V', 'V', 'D', 'V'] },
+    { pos: 2, teamId: 'team-fla', teamName: 'Imperial Esports', short: 'IMP', pts: 60, played: 28, wins: 20, draws: 0, losses: 8, gf: 47, ga: 25, gd: 22, form: ['V', 'V', 'D', 'V', 'V'] },
+    { pos: 3, teamId: 'team-franca', teamName: 'Fluxo Esports', short: 'FX', pts: 51, played: 28, wins: 17, draws: 0, losses: 11, gf: 41, ga: 30, gd: 11, form: ['V', 'D', 'V', 'V', 'D'] },
+    { pos: 4, teamId: 'team-bot', teamName: 'LOUD Esports', short: 'LLL', pts: 48, played: 28, wins: 16, draws: 0, losses: 12, gf: 39, ga: 31, gd: 8, form: ['V', 'V', 'D', 'V', 'V'] },
+    { pos: 5, teamId: 'team-for', teamName: 'MIBR Esports', short: 'MIBR', pts: 45, played: 28, wins: 15, draws: 0, losses: 13, gf: 37, ga: 33, gd: 4, form: ['D', 'V', 'V', 'D', 'V'] },
+    { pos: 6, teamId: 'team-spfc', teamName: 'paiN Gaming CS2', short: 'PAIN', pts: 42, played: 28, wins: 14, draws: 0, losses: 14, gf: 35, ga: 34, gd: 1, form: ['V', 'D', 'V', 'V', 'D'] }
   ];
 
   const tournaments = [
     {
       id: 'trn-brasileirao-2026',
       federation_id: 'fed-cbf',
-      name: 'Campeonato Brasileiro Série A - Elite Campeonei',
-      sport: 'Futebol',
-      season: '2026',
+      name: 'CBCS Major Brasil CS2 — Liga Elite Campeonei',
+      sport: 'CS2',
+      season: '2026 Split 1',
       format: 'PONTOS_CORRIDOS',
       status: 'IN_PROGRESS',
       max_teams: 20,
@@ -485,47 +514,51 @@ function seedDatabaseIfNeeded(db) {
       entry_fee: 5000,
       platform_fee_pct: 10,
       prize: prize1,
-      scoring_rules: { win: 3, draw: 1, loss: 0 },
-      tiebreaker_rules: ['WINS', 'GOAL_DIFF', 'GOALS_FOR', 'HEAD_TO_HEAD', 'LESS_RED_CARDS', 'LESS_YELLOW_CARDS'],
-      official_data_source: 'CBF Opta / Sportradar Real-Time Feed',
-      standings: standingsSerieA
+      scoring_rules: { win: 3, draw: 0, loss: 0, overtimeWin: 2 },
+      tiebreaker_rules: ['SERIES_WINS', 'MAP_DIFF', 'ROUND_DIFF', 'HEAD_TO_HEAD', 'HLTV_TEAM_RATING'],
+      official_data_source: 'Valve CS2 GSI + GRID Esports Official Feed',
+      standings: standingsCs2Elite
     },
     {
       id: 'trn-copa-campeonei-2026',
       federation_id: 'fed-fpf',
-      name: 'Copa Campeonei Brasil de Clubes (Mata-Mata)',
-      sport: 'Futebol',
-      season: '2026',
+      name: 'Copa Campeonei VCT Challengers Brasil (Playoffs MD3)',
+      sport: 'Valorant',
+      season: '2026 Stage 2',
       format: 'MATA_MATA',
       status: 'IN_PROGRESS',
       max_teams: 16,
-      registered_teams_count: 14,
+      registered_teams_count: 16,
       entry_fee: 2500,
       platform_fee_pct: 8,
       prize: prize2,
-      scoring_rules: { win: 3, draw: 1, loss: 0, penaltyShootoutOnTie: true },
-      tiebreaker_rules: ['GOAL_DIFF_AGGREGATE', 'PENALTY_SHOOTOUT'],
-      official_data_source: 'FPF Live Data API + VAR Sync',
-      standings: standingsSerieA.slice(0, 4)
+      scoring_rules: { win: 3, draw: 0, loss: 0, deciderOvertimeTwoRounds: true },
+      tiebreaker_rules: ['MAP_DIFF', 'ROUND_DIFF_ASCENT_DECIDER', 'ACS_COMBAT_SCORE'],
+      official_data_source: 'Riot Games VCT Live Telemetry v3',
+      standings: [
+        { pos: 1, teamId: 'team-bot', teamName: 'LOUD Valorant', short: 'LLL', pts: 57, played: 24, wins: 19, draws: 0, losses: 5, gf: 42, ga: 16, gd: 26, form: ['V', 'V', 'V', 'V', 'D'] },
+        { pos: 2, teamId: 'team-for', teamName: 'MIBR Valorant', short: 'MIBR', pts: 51, played: 24, wins: 17, draws: 0, losses: 7, gf: 38, ga: 20, gd: 18, form: ['V', 'D', 'V', 'V', 'V'] }
+      ]
     },
     {
       id: 'trn-supercopa-grupos-2026',
       federation_id: 'fed-lnb',
-      name: 'Supercopa Interclubes NBB (Grupos + Playoffs)',
-      sport: 'Basquete',
-      season: '2026',
+      name: 'Split CBLOL / LTA Sul — Taça Campeonei (Grupos + Playoffs)',
+      sport: 'League of Legends',
+      season: '2026 Split 2',
       format: 'GRUPOS_MATA_MATA',
       status: 'OPEN_REGISTRATION',
       max_teams: 12,
-      registered_teams_count: 8,
+      registered_teams_count: 10,
       entry_fee: 1500,
       platform_fee_pct: 10,
       prize: prize3,
-      scoring_rules: { win: 2, draw: 0, loss: 1 },
-      tiebreaker_rules: ['WINS', 'HEAD_TO_HEAD', 'POINTS_AVERAGE'],
-      official_data_source: 'FIBA Genius Sports Official Feed',
+      scoring_rules: { win: 3, draw: 0, loss: 0 },
+      tiebreaker_rules: ['SERIES_WINS', 'HEAD_TO_HEAD', 'SHORTEST_AVG_WIN_TIME'],
+      official_data_source: 'Riot Games LoL Esports Official API',
       standings: [
-        { pos: 1, teamId: 'team-franca', teamName: 'Sesi Franca Basquete', short: 'FRA', pts: 45, played: 24, wins: 21, draws: 0, losses: 3, gf: 2140, ga: 1820, gd: 320, form: ['V', 'V', 'V', 'V', 'D'] }
+        { pos: 1, teamId: 'team-spfc', teamName: 'paiN Gaming', short: 'PAIN', pts: 54, played: 22, wins: 18, draws: 0, losses: 4, gf: 39, ga: 14, gd: 25, form: ['V', 'V', 'V', 'V', 'D'] },
+        { pos: 2, teamId: 'team-cor', teamName: 'RED Canids Kalunga', short: 'RED', pts: 45, played: 22, wins: 15, draws: 0, losses: 7, gf: 34, ga: 19, gd: 15, form: ['V', 'V', 'D', 'V', 'V'] }
       ]
     }
   ];
@@ -565,198 +598,198 @@ function seedDatabaseIfNeeded(db) {
     );
   }
 
-  // 5. Partidas Ao Vivo e Pré-Jogo com Cotações Multi-Mercado
+  // 5. Partidas de E-Sports Ao Vivo com Telemetria de Servidor e Mercados Específicos
   const matches = [
     {
       id: 'mch-pal-fla-live',
       tournament_id: 'trn-brasileirao-2026',
-      tournament_name: 'Brasileirão Série A - Rodada 33',
-      sport: 'Futebol',
-      round_name: 'Rodada 33 • Allianz Parque',
+      tournament_name: 'CBCS Major Brasil CS2 • MD3 (Mapa 2: Mirage)',
+      sport: 'CS2',
+      round_name: 'Série MD3 (FURIA 1-0) • Mapa 2: de_mirage • Round 21',
       status: 'LIVE',
-      minute: 64,
+      minute: 21,
       home_team_id: 'team-pal',
       away_team_id: 'team-fla',
-      home_team_name: 'SE Palmeiras',
-      away_team_name: 'CR Flamengo',
-      home_short: 'PAL',
-      away_short: 'FLA',
-      home_score: 2,
-      away_score: 1,
-      official_feed_code: 'CBF-2026-R33-001',
+      home_team_name: 'FURIA Esports',
+      away_team_name: 'Imperial Esports',
+      home_short: 'FUR',
+      away_short: 'IMP',
+      home_score: 11,
+      away_score: 9,
+      official_feed_code: 'VALVE-GSI-CS2-MIRAGE-R21',
       stats: {
-        possessionHome: 53,
-        possessionAway: 47,
-        shotsOnTargetHome: 7,
-        shotsOnTargetAway: 5,
+        possessionHome: 58,
+        possessionAway: 42,
+        shotsOnTargetHome: 14,
+        shotsOnTargetAway: 11,
         cornersHome: 6,
         cornersAway: 4,
-        yellowCardsHome: 2,
-        yellowCardsAway: 3,
-        xgHome: 2.14,
-        xgAway: 1.42,
-        lastEvent: '61\' Gol de Estêvão Willian (SE Palmeiras)'
+        yellowCardsHome: 1,
+        yellowCardsAway: 2,
+        xgHome: 1.24,
+        xgAway: 1.08,
+        lastEvent: 'Round 21 • KSCERATO vence Clutch 1v2 no Bomb A (AK-47 Headshot)!'
       },
       odds: {
-        matchWinner: { home: 1.58, draw: 3.75, away: 5.80 },
+        matchWinner: { home: 1.58, draw: 4.80, away: 2.45 },
         handicap: {
-          homeMinus05: { label: 'Palmeiras -0.5', odds: 1.58 },
-          awayPlus05: { label: 'Flamengo +0.5', odds: 2.38 },
-          homeMinus15: { label: 'Palmeiras -1.5', odds: 2.75 },
-          awayPlus15: { label: 'Flamengo +1.5', odds: 1.44 }
+          homeMinus05: { label: 'FURIA -1.5 Mapas (2-0)', odds: 1.72 },
+          awayPlus05: { label: 'Imperial +1.5 Mapas', odds: 2.08 },
+          homeMinus15: { label: 'FURIA -2.5 Rounds (Mirage)', odds: 1.85 },
+          awayPlus15: { label: 'Imperial +2.5 Rounds', odds: 1.92 }
         },
         goalsOverUnder: {
-          over35: { label: 'Mais de 3.5 Gols', odds: 1.92 },
-          under35: { label: 'Menos de 3.5 Gols', odds: 1.88 },
-          over45: { label: 'Mais de 4.5 Gols', odds: 3.40 },
-          under45: { label: 'Menos de 4.5 Gols', odds: 1.30 }
+          over35: { label: 'Mais de 21.5 Rounds no Mapa', odds: 1.92 },
+          under35: { label: 'Menos de 21.5 Rounds no Mapa', odds: 1.88 },
+          over45: { label: 'Mais de 2.5 Mapas na Série', odds: 2.35 },
+          under45: { label: 'Menos de 2.5 Mapas na Série', odds: 1.56 }
         },
-        btts: { yes: 1.15, no: 4.90 },
-        liveNextGoal: { home: 2.10, none: 2.85, away: 2.65 }
+        btts: { yes: 2.15, no: 1.68 },
+        liveNextGoal: { home: 1.65, none: 12.0, away: 2.25 }
       }
     },
     {
       id: 'mch-bot-for-live',
-      tournament_id: 'trn-brasileirao-2026',
-      tournament_name: 'Brasileirão Série A - Rodada 33',
-      sport: 'Futebol',
-      round_name: 'Rodada 33 • Nilton Santos',
+      tournament_id: 'trn-copa-campeonei-2026',
+      tournament_name: 'Copa Campeonei VCT Brasil • Upper Final MD3',
+      sport: 'Valorant',
+      round_name: 'Mapa 3 Decider: Ascent • Round 18 (Séries 1-1)',
       status: 'LIVE',
-      minute: 38,
+      minute: 18,
       home_team_id: 'team-bot',
       away_team_id: 'team-for',
-      home_team_name: 'Botafogo FR',
-      away_team_name: 'Fortaleza EC',
-      home_short: 'BOT',
-      away_short: 'FOR',
-      home_score: 1,
-      away_score: 1,
-      official_feed_code: 'CBF-2026-R33-002',
+      home_team_name: 'LOUD Valorant',
+      away_team_name: 'MIBR Valorant',
+      home_short: 'LLL',
+      away_short: 'MIBR',
+      home_score: 10,
+      away_score: 8,
+      official_feed_code: 'RIOT-VCT-ASCENT-R18',
       stats: {
-        possessionHome: 58,
-        possessionAway: 42,
-        shotsOnTargetHome: 5,
-        shotsOnTargetAway: 3,
+        possessionHome: 55,
+        possessionAway: 45,
+        shotsOnTargetHome: 12,
+        shotsOnTargetAway: 10,
         cornersHome: 5,
-        cornersAway: 2,
+        cornersAway: 3,
         yellowCardsHome: 1,
-        yellowCardsAway: 2,
-        xgHome: 1.35,
-        xgAway: 0.98,
-        lastEvent: '34\' Gol de Lucero (Fortaleza EC) - Contra-ataque'
+        yellowCardsAway: 1,
+        xgHome: 245,
+        xgAway: 218,
+        lastEvent: 'Round 18 • Less (Viper) garante 4K no Retake do Spike Site B!'
       },
       odds: {
-        matchWinner: { home: 1.95, draw: 3.25, away: 4.10 },
+        matchWinner: { home: 1.95, draw: 5.20, away: 2.10 },
         handicap: {
-          homeMinus05: { label: 'Botafogo -0.5', odds: 1.95 },
-          awayPlus05: { label: 'Fortaleza +0.5', odds: 1.86 },
-          homeMinus15: { label: 'Botafogo -1.5', odds: 3.60 },
-          awayPlus15: { label: 'Fortaleza +1.5', odds: 1.28 }
+          homeMinus05: { label: 'LOUD -2.5 Rounds (Ascent)', odds: 1.95 },
+          awayPlus05: { label: 'MIBR +2.5 Rounds (Ascent)', odds: 1.86 },
+          homeMinus15: { label: 'LOUD -3.5 Rounds', odds: 2.65 },
+          awayPlus15: { label: 'MIBR +3.5 Rounds', odds: 1.44 }
         },
         goalsOverUnder: {
-          over25: { label: 'Mais de 2.5 Gols', odds: 1.54 },
-          under25: { label: 'Menos de 2.5 Gols', odds: 2.42 },
-          over35: { label: 'Mais de 3.5 Gols', odds: 2.45 },
-          under35: { label: 'Menos de 3.5 Gols', odds: 1.52 }
+          over25: { label: 'Mais de 21.5 Rounds (Ascent)', odds: 1.74 },
+          under25: { label: 'Menos de 21.5 Rounds (Ascent)', odds: 2.05 },
+          over35: { label: 'Prorrogação (Overtime Sim)', odds: 3.80 },
+          under35: { label: 'Sem Prorrogação (Tempo Normal)', odds: 1.24 }
         },
-        btts: { yes: 1.05, no: 8.50 },
-        liveNextGoal: { home: 1.82, none: 3.90, away: 2.95 }
+        btts: { yes: 1.42, no: 2.75 },
+        liveNextGoal: { home: 1.80, none: 15.0, away: 2.00 }
       }
     },
     {
       id: 'mch-spfc-cor-live',
-      tournament_id: 'trn-copa-campeonei-2026',
-      tournament_name: 'Copa Campeonei Brasil - Semifinal',
-      sport: 'Futebol',
-      round_name: 'Semifinal Jogo 2 • MorumBIS',
+      tournament_id: 'trn-supercopa-grupos-2026',
+      tournament_name: 'Split CBLOL / LTA Sul • Semifinal MD5',
+      sport: 'League of Legends',
+      round_name: 'Jogo 3 • Summoner\'s Rift • 29 min (+6.4k Ouro PAI)',
       status: 'LIVE',
-      minute: 77,
+      minute: 29,
       home_team_id: 'team-spfc',
       away_team_id: 'team-cor',
-      home_team_name: 'São Paulo FC',
-      away_team_name: 'SC Corinthians Paulista',
-      home_short: 'SAO',
-      away_short: 'COR',
-      home_score: 1,
-      away_score: 0,
-      official_feed_code: 'FPF-2026-SF-001',
+      home_team_name: 'paiN Gaming',
+      away_team_name: 'RED Canids Kalunga',
+      home_short: 'PAIN',
+      away_short: 'RED',
+      home_score: 14,
+      away_score: 9,
+      official_feed_code: 'RIOT-LOL-LTA-SF-G3',
       stats: {
-        possessionHome: 51,
-        possessionAway: 49,
-        shotsOnTargetHome: 6,
-        shotsOnTargetAway: 4,
-        cornersHome: 7,
-        cornersAway: 5,
-        yellowCardsHome: 3,
-        yellowCardsAway: 3,
-        xgHome: 1.62,
-        xgAway: 1.11,
-        lastEvent: '52\' Gol de Lucas Moura (São Paulo FC)'
+        possessionHome: 62,
+        possessionAway: 38,
+        shotsOnTargetHome: 8,
+        shotsOnTargetAway: 3,
+        cornersHome: 4,
+        cornersAway: 1,
+        yellowCardsHome: 1,
+        yellowCardsAway: 0,
+        xgHome: 58.4,
+        xgAway: 52.0,
+        lastEvent: '28:40 • paiN Gaming garante Alma Hextec + Barão Nashor (4x1 na Teamfight)!'
       },
       odds: {
-        matchWinner: { home: 1.36, draw: 4.40, away: 9.50 },
+        matchWinner: { home: 1.36, draw: 6.50, away: 3.15 },
         handicap: {
-          homeMinus05: { label: 'São Paulo -0.5', odds: 1.36 },
-          awayPlus05: { label: 'Corinthians +0.5', odds: 3.05 },
-          homeMinus15: { label: 'São Paulo -1.5', odds: 2.90 },
-          awayPlus15: { label: 'Corinthians +1.5', odds: 1.40 }
+          homeMinus05: { label: 'paiN -5.5 Abates (Kills)', odds: 1.76 },
+          awayPlus05: { label: 'RED Canids +5.5 Abates', odds: 1.98 },
+          homeMinus15: { label: 'paiN -1.5 Mapas na Série', odds: 1.65 },
+          awayPlus15: { label: 'RED Canids +1.5 Mapas', odds: 2.18 }
         },
         goalsOverUnder: {
-          over15: { label: 'Mais de 1.5 Gols', odds: 1.78 },
-          under15: { label: 'Menos de 1.5 Gols', odds: 2.02 },
-          over25: { label: 'Mais de 2.5 Gols', odds: 3.85 },
-          under25: { label: 'Menos de 2.5 Gols', odds: 1.24 }
+          over15: { label: 'Mais de 26.5 Abates Totais', odds: 1.78 },
+          under15: { label: 'Menos de 26.5 Abates Totais', odds: 2.02 },
+          over25: { label: 'Duração: Mais de 33.5 Minutos', odds: 1.90 },
+          under25: { label: 'Duração: Menos de 33.5 Minutos', odds: 1.86 }
         },
-        btts: { yes: 2.65, no: 1.45 },
-        liveNextGoal: { home: 2.80, none: 2.02, away: 3.10 }
+        btts: { yes: 1.55, no: 2.35 },
+        liveNextGoal: { home: 1.52, none: 9.50, away: 2.45 }
       }
     },
     {
       id: 'mch-franca-nbb-live',
-      tournament_id: 'trn-supercopa-grupos-2026',
-      tournament_name: 'Supercopa Interclubes NBB',
-      sport: 'Basquete',
-      round_name: '3º Quarto • Ginásio Pedrocão',
+      tournament_id: 'trn-brasileirao-2026',
+      tournament_name: 'Supercopa FPS • CS2 & Rainbow Six Showdown',
+      sport: 'CS2',
+      round_name: 'Mapa 1: de_inferno • Round 16 (2º Half Pistol)',
       status: 'LIVE',
-      minute: 28,
+      minute: 16,
       home_team_id: 'team-franca',
-      away_team_id: 'team-fla',
-      home_team_name: 'Sesi Franca Basquete',
-      away_team_name: 'Flamengo Basquete',
-      home_short: 'FRA',
-      away_short: 'FLA',
-      home_score: 68,
-      away_score: 63,
-      official_feed_code: 'LNB-2026-SC-009',
+      away_team_id: 'team-minas',
+      home_team_name: 'Fluxo Esports',
+      away_team_name: 'Team Liquid Brasil',
+      home_short: 'FX',
+      away_short: 'TL',
+      home_score: 9,
+      away_score: 7,
+      official_feed_code: 'CBGE-CS2-INFERNO-R16',
       stats: {
-        possessionHome: 54,
-        possessionAway: 46,
-        shotsOnTargetHome: 26,
-        shotsOnTargetAway: 23,
-        cornersHome: 9,
-        cornersAway: 7,
-        yellowCardsHome: 2,
-        yellowCardsAway: 3,
-        xgHome: 88.5,
-        xgAway: 84.0,
-        lastEvent: '3Q 02:14 - Cesta de 3 pts de Lucas Dias (Sesi Franca)'
+        possessionHome: 53,
+        possessionAway: 47,
+        shotsOnTargetHome: 11,
+        shotsOnTargetAway: 9,
+        cornersHome: 4,
+        cornersAway: 4,
+        yellowCardsHome: 1,
+        yellowCardsAway: 1,
+        xgHome: 1.16,
+        xgAway: 1.11,
+        lastEvent: 'Round 16 • Lucaozy conquista Triple Kill de USP-S no Pistol Round CT!'
       },
       odds: {
-        matchWinner: { home: 1.48, draw: 14.0, away: 2.72 },
+        matchWinner: { home: 1.68, draw: 4.90, away: 2.22 },
         handicap: {
-          homeMinus05: { label: 'Sesi Franca -4.5 pts', odds: 1.85 },
-          awayPlus05: { label: 'Flamengo +4.5 pts', odds: 1.95 },
-          homeMinus15: { label: 'Sesi Franca -8.5 pts', odds: 2.55 },
-          awayPlus15: { label: 'Flamengo +8.5 pts', odds: 1.50 }
+          homeMinus05: { label: 'Fluxo -2.5 Rounds (Inferno)', odds: 1.85 },
+          awayPlus05: { label: 'Team Liquid +2.5 Rounds', odds: 1.95 },
+          homeMinus15: { label: 'Fluxo -1.5 Mapas (2-0)', odds: 2.55 },
+          awayPlus15: { label: 'Team Liquid +1.5 Mapas', odds: 1.50 }
         },
         goalsOverUnder: {
-          over25: { label: 'Mais de 164.5 Pontos', odds: 1.88 },
-          under25: { label: 'Menos de 164.5 Pontos', odds: 1.92 },
-          over35: { label: 'Mais de 170.5 Pontos', odds: 2.40 },
-          under35: { label: 'Menos de 170.5 Pontos', odds: 1.55 }
+          over25: { label: 'Mais de 21.5 Rounds no Mapa', odds: 1.88 },
+          under25: { label: 'Menos de 21.5 Rounds no Mapa', odds: 1.92 },
+          over35: { label: 'Mais de 2.5 Mapas na Série', odds: 2.10 },
+          under35: { label: 'Menos de 2.5 Mapas na Série', odds: 1.70 }
         },
-        btts: { yes: 1.10, no: 6.20 },
-        liveNextGoal: { home: 1.75, none: 19.0, away: 2.05 }
+        btts: { yes: 1.95, no: 1.82 },
+        liveNextGoal: { home: 1.72, none: 14.0, away: 2.10 }
       }
     }
   ];
@@ -794,13 +827,13 @@ function seedDatabaseIfNeeded(db) {
     );
   }
 
-  // 6. Ranking de Prognosticadores (Tipsters) e Mercado de Previsões Esportivas
+  // 6. Ranking de Prognosticadores de E-Sports (Tipsters) e Mercado de Previsões
   const tipsters = [
     {
       user_id: 'usr-pro-01',
-      display_name: 'Rafael Mendonça • QuantBrasileirão',
-      specialty_sport: 'Futebol',
-      avatar_initials: 'RM',
+      display_name: 'Rafael "QuantCS" • HLTV & Economy Analytics',
+      specialty_sport: 'CS2',
+      avatar_initials: 'QC',
       verified_pro: 1,
       total_predictions: 142,
       greens: 105,
@@ -814,9 +847,9 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       user_id: 'tipster-02',
-      display_name: 'Camila Tática • Scout & xG Pro',
-      specialty_sport: 'Futebol',
-      avatar_initials: 'CT',
+      display_name: 'Camila "VCT Scout" • Map Pool & First Blood Pro',
+      specialty_sport: 'Valorant',
+      avatar_initials: 'VS',
       verified_pro: 1,
       total_predictions: 118,
       greens: 84,
@@ -830,9 +863,9 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       user_id: 'tipster-03',
-      display_name: 'Henrique Hoops • NBB & NBA Analytics',
-      specialty_sport: 'Basquete',
-      avatar_initials: 'HH',
+      display_name: 'Henrique "DraftKing" • CBLOL, LCK & Gold @15',
+      specialty_sport: 'League of Legends',
+      avatar_initials: 'DK',
       verified_pro: 1,
       total_predictions: 96,
       greens: 69,
@@ -846,9 +879,9 @@ function seedDatabaseIfNeeded(db) {
     },
     {
       user_id: 'tipster-04',
-      display_name: 'Beatriz Ace • Superliga Vôlei & Tênis',
-      specialty_sport: 'Vôlei',
-      avatar_initials: 'BA',
+      display_name: 'Beatriz "TacticalFPS" • R6 Siege & CS2 Totals',
+      specialty_sport: 'Rainbow Six',
+      avatar_initials: 'TF',
       verified_pro: 1,
       total_predictions: 85,
       greens: 60,
@@ -893,120 +926,120 @@ function seedDatabaseIfNeeded(db) {
     {
       id: 'pred-01',
       tipster_id: 'usr-pro-01',
-      tipster_name: 'Rafael Mendonça • QuantBrasileirão',
-      tipster_badge: 'DIAMOND PRO • ROI +28.4%',
-      sport: 'Futebol',
+      tipster_name: 'Rafael "QuantCS" • HLTV & Economy Analytics',
+      tipster_badge: 'GLOBAL ELITE PRO • ROI +28.4%',
+      sport: 'CS2',
       match_id: 'mch-pal-fla-live',
-      match_label: 'SE Palmeiras vs CR Flamengo (Série A)',
-      market_type: 'Total de Gols Asiático',
-      selection_label: 'Mais de 3.5 Gols na Partida',
+      match_label: 'FURIA Esports vs Imperial Esports (CBCS Major CS2)',
+      market_type: 'Total de Rounds (Mirage)',
+      selection_label: 'Mais de 21.5 Rounds no Mapa 2',
       recommended_odds: 1.92,
       confidence_pct: 92,
       stake_units: 3.0,
       price: 29.9,
-      analysis_preview: 'Modelo xG aponta 3.56 gols esperados combinados com linha alta do Flamengo no 2º tempo.',
+      analysis_preview: 'Economia TR da Imperial preservada ($18.5k acumulados) após plant de C4 garante pelo menos mais 2 gun rounds.',
       analysis_full:
-        'RELATÓRIO QUANTITATIVO VIP: Com o placar em 2x1 aos 64\', o Flamengo adiantou seus laterais para o último terço, deixando espaço para transições rápidas de Estêvão e Vitor Roque (xG em transição de 0.42 por contra-ataque). A odd justa calculada por simulação Monte Carlo (10.000 iterações) para Over 3.5 gols é @1.68, oferecendo +14.2% de Valor Esperado Positivo (+EV) na cotação atual @1.92. Entrada recomendada: 3 unidades.',
+        'RELATÓRIO QUANTITATIVO CS2 VIP: Com o placar em 11x9 na Mirage, a Imperial tem Loss Bonus máximo ($3.400 por player) e 4 AK-47 + AWP de HEN1 guardada. O winrate da Imperial em Full Buy TR na Mirage é de 54.8%. A odd justa calculada por simulação Monte Carlo (10.000 rounds) para Over 21.5 Rounds é @1.66, oferecendo +15.6% de Valor Esperado Positivo (+EV) na cotação atual @1.92. Entrada recomendada: 3 unidades.',
       result_status: 'PENDING',
       sales_count: 48
     },
     {
       id: 'pred-02',
       tipster_id: 'tipster-02',
-      tipster_name: 'Camila Tática • Scout & xG Pro',
-      tipster_badge: 'ELITE ANALYST • 73.0% WIN',
-      sport: 'Futebol',
+      tipster_name: 'Camila "VCT Scout" • Map Pool & First Blood Pro',
+      tipster_badge: 'RADIANT ANALYST • 73.0% WIN',
+      sport: 'Valorant',
       match_id: 'mch-bot-for-live',
-      match_label: 'Botafogo FR vs Fortaleza EC (Série A)',
-      market_type: 'Resultado Final & Handicap',
-      selection_label: 'Botafogo -0.5 (Vitória no Tempo Normal)',
+      match_label: 'LOUD vs MIBR (Copa Campeonei VCT - Ascent)',
+      market_type: 'Vencedor da Série & Handicap Rounds',
+      selection_label: 'LOUD Valorant vence a Série MD3',
       recommended_odds: 1.95,
       confidence_pct: 88,
       stake_units: 2.5,
       price: 19.9,
-      analysis_preview: 'Pressão territorial intensa do Botafogo no Nilton Santos (58% posse e 5 escanteios no 1ºT).',
+      analysis_preview: 'LOUD está no lado Defensivo da Ascent (68% de conversão de Retake com Viper + Killjoy de Less).',
       analysis_full:
-        'ANÁLISE TÁTICA COMPLETA: O Botafogo registra média de 2.31 pontos por jogo em casa no sintético do Nilton Santos. Savarino e Igor Jesus estão vencendo 68% dos duelos individuais pelo setor direito defensivo do Fortaleza. Recomendação de 2.5u na vitória simples (@1.95) com proteção de cashout parcial se abrir vantagem até os 75 minutos.',
+        'ANÁLISE TÁTICA COMPLETA: A composição double-controller + Killjoy da LOUD na Ascent registra 71.4% de winrate no lado Defensivo neste Stage. Less e cauanzin já possuem Ultimates (Lockdown + Hunter\'s Fury) prontas para o Round 19, quebrando a execução B do MIBR. Recomendação de 2.5u na vitória da LOUD (@1.95) com proteção de cashout no match point.',
       result_status: 'PENDING',
       sales_count: 35
     },
     {
       id: 'pred-03',
       tipster_id: 'tipster-03',
-      tipster_name: 'Henrique Hoops • NBB & NBA Analytics',
-      tipster_badge: 'TOP #1 BASQUETE • ROI +21.8%',
-      sport: 'Basquete',
-      match_id: 'mch-franca-nbb-live',
-      match_label: 'Sesi Franca vs Flamengo Basquete (NBB)',
-      market_type: 'Handicap de Pontos',
-      selection_label: 'Sesi Franca -4.5 Pontos',
-      recommended_odds: 1.85,
+      tipster_name: 'Henrique "DraftKing" • CBLOL, LCK & Gold @15',
+      tipster_badge: 'CHALLENGER ANALYST • ROI +21.8%',
+      sport: 'League of Legends',
+      match_id: 'mch-spfc-cor-live',
+      match_label: 'paiN Gaming vs RED Canids (CBLOL Semifinal)',
+      market_type: 'Handicap de Abates (Kills)',
+      selection_label: 'paiN Gaming -5.5 Abates no Jogo 3',
+      recommended_odds: 1.76,
       confidence_pct: 90,
       stake_units: 3.0,
       price: 24.9,
-      analysis_preview: 'Aproveitamento de 44% nas bolas de perímetro do Franca no Pedrocão e domínio nos rebotes ofensivos.',
+      analysis_preview: 'Com Alma Hextec + buff do Barão ativo e +6.4k de ouro, o cerco às torres de inibidor força luta favorável para TitaN.',
       analysis_full:
-        'PROGNÓSTICO NBB PRO: O Sesi Franca converteu 11 bolas de 3 pontos até o 3º quarto e mantém diferencial de +9 em rebotes ofensivos com Lucas Dias e Georginho. Nos últimos 14 jogos no Pedrocão, cobriu a linha de -4.5 em 12 oportunidades (85.7%). Entrada de 3 unidades.',
+        'PROGNÓSTICO CBLOL PRO: A paiN Gaming detém 100% de conversão quando abre +5k de ouro aos 25 minutos com composição de Hypercarry (Jinx/Azir). A RED Canids precisará forçar engaje desesperado no Dragão Ancião, onde o diferencial de itens garante pelo menos 3 a 4 abates extras antes do Nexus cair. Entrada de 3 unidades.',
       result_status: 'PENDING',
       sales_count: 29
     },
     {
       id: 'pred-04',
       tipster_id: 'usr-pro-01',
-      tipster_name: 'Rafael Mendonça • QuantBrasileirão',
-      tipster_badge: 'DIAMOND PRO • ROI +28.4%',
-      sport: 'Futebol',
-      match_id: 'mch-spfc-cor-live',
-      match_label: 'São Paulo FC vs Corinthians (Copa Campeonei)',
-      market_type: 'Mercado Gratuito Verificado',
-      selection_label: 'Menos de 2.5 Gols na Partida',
-      recommended_odds: 1.62,
+      tipster_name: 'Rafael "QuantCS" • HLTV & Economy Analytics',
+      tipster_badge: 'GLOBAL ELITE PRO • ROI +28.4%',
+      sport: 'CS2',
+      match_id: 'mch-franca-nbb-live',
+      match_label: 'Fluxo Esports vs Team Liquid (Supercopa FPS)',
+      market_type: 'Pick Gratuita Verificada',
+      selection_label: 'Mais de 21.5 Rounds (Inferno)',
+      recommended_odds: 1.88,
       confidence_pct: 86,
       stake_units: 2.0,
       price: 0,
-      analysis_preview: 'Clássico Majestoso decisivo de semifinal com forte compactação defensiva do São Paulo.',
+      analysis_preview: 'Inferno historicamente equilibrada entre Fluxo e Liquid com alta taxa de conversão de clutches no Bomb B.',
       analysis_full:
-        'PICK PÚBLICA AUDITADA: Com 1x0 no placar na semifinal, o São Paulo baixou suas linhas em bloco médio-baixo (4-4-2 compacto), reduzindo o xG cedido nos últimos 25 minutos para apenas 0.19. Excelente valor no Under 2.5 gols.',
+        'PICK PÚBLICA AUDITADA: Ambos os times venceram seus halfs de CT nas últimas 5 séries em de_inferno com média de 22.8 rounds por mapa. Excelente valor no Over 21.5 rounds.',
       result_status: 'GREEN',
       sales_count: 112
     },
     {
       id: 'pred-05',
       tipster_id: 'tipster-04',
-      tipster_name: 'Beatriz Ace • Superliga Vôlei & Tênis',
-      tipster_badge: 'SUPERLIGA SPECIALIST',
-      sport: 'Vôlei',
-      match_id: 'mch-pal-fla-live',
-      match_label: 'Itambé Minas vs Praia Clube (Superliga Feminina)',
-      market_type: 'Handicap de Sets',
-      selection_label: 'Itambé Minas -1.5 Sets',
+      tipster_name: 'Beatriz "TacticalFPS" • R6 Siege & CS2 Totals',
+      tipster_badge: 'FPS SPECIALIST',
+      sport: 'Rainbow Six',
+      match_id: 'mch-franca-nbb-live',
+      match_label: 'Team Liquid vs FaZe Clan (BR6 Stage 1)',
+      market_type: 'Handicap de Mapas',
+      selection_label: 'Team Liquid -1.5 Mapas (2-0)',
       recommended_odds: 1.88,
       confidence_pct: 84,
       stake_units: 2.0,
       price: 14.9,
-      analysis_preview: 'Eficiência de bloqueio superior do Minas na Arena UniBH (3.4 pontos de bloqueio por set).',
+      analysis_preview: 'Dupla Nesk e Paluh registrou 1.31 de Rating combinado em Chalet e Clubhouse.',
       analysis_full:
-        'ANÁLISE SUPERLIGA: Kisy e Thaísa lideram o índice de eficiência de ataque (54.2%) e bloqueio na competição. Vitória por 3x0 ou 3x1 confirmada no histórico.',
+        'ANÁLISE BR6: Team Liquid dominou os bans de operadores e fechou a série em 2x0 (7-4 Chalet, 7-5 Clubhouse), confirmando o GREEN auditado no histórico.',
       result_status: 'GREEN',
       sales_count: 41
     },
     {
       id: 'pred-06',
       tipster_id: 'tipster-02',
-      tipster_name: 'Camila Tática • Scout & xG Pro',
-      tipster_badge: 'ELITE ANALYST • 73.0% WIN',
-      sport: 'Futebol',
+      tipster_name: 'Camila "VCT Scout" • Map Pool & First Blood Pro',
+      tipster_badge: 'RADIANT ANALYST • 73.0% WIN',
+      sport: 'Valorant',
       match_id: 'mch-bot-for-live',
-      match_label: 'Cruzeiro vs Atlético-MG (Rodada 32)',
-      market_type: 'Ambas Marcam (BTTS)',
-      selection_label: 'Ambas as Equipes Marcam: Sim',
+      match_label: 'KRÜ Esports vs FURIA Valorant (VCT Americas)',
+      market_type: 'Total de Mapas',
+      selection_label: 'Mais de 2.5 Mapas na Série',
       recommended_odds: 1.98,
       confidence_pct: 78,
       stake_units: 1.5,
       price: 15.0,
-      analysis_preview: 'Registro histórico transparente de prognóstico encerrado em 0x0 (Red contabilizado no ROI).',
+      analysis_preview: 'Registro histórico transparente de prognóstico encerrado em 2x0 (Red contabilizado no ROI da analista).',
       analysis_full:
-        'TRANSPARÊNCIA CAMPEONEI: Esta previsão foi encerrada como RED (0x0 no clássico) e permanece 100% visível e imutável no histórico público da prognosticadora para auditoria dos compradores.',
+        'TRANSPARÊNCIA CAMPEONEI: Esta previsão foi encerrada como RED (série decidida em 2x0 na prorrogação da Lotus) e permanece 100% visível e imutável no histórico público da prognosticadora para auditoria dos compradores.',
       result_status: 'RED',
       sales_count: 22
     }
@@ -1046,7 +1079,7 @@ function seedDatabaseIfNeeded(db) {
   const pixSeed1 = hsm.generatePixBrCode({
     amount: 5000,
     txid: 'CAMPEONEIPIXSEED01',
-    description: 'INSCRICAO SERIE A PAL'
+    description: 'INSCRICAO CBCS FURIA'
   });
   recordFinancialTransaction(db, {
     txId: 'TX-PIX-2026-0001',
@@ -1057,7 +1090,7 @@ function seedDatabaseIfNeeded(db) {
     fee: 0,
     balanceAfter: 14850.0,
     referenceId: 'trn-brasileirao-2026',
-    description: 'Pagamento de Inscrição PIX - Campeonato Brasileiro Série A (SE Palmeiras)',
+    description: 'Pagamento de Inscrição PIX - CBCS Major Brasil CS2 (FURIA Esports)',
     institutionName: 'Banco Central do Brasil (SPI / Itaú Unibanco)',
     pixMeta: pixSeed1
   });
@@ -1081,7 +1114,7 @@ function seedDatabaseIfNeeded(db) {
     pixMeta: pixSeed2
   });
 
-  // 8. Aposta Inicial Exemplo
+  // 8. Aposta Inicial Exemplo em E-Sports
   db.prepare(`
     INSERT INTO bets (
       id, user_id, bet_type, selections_json, combined_odds, stake_amount,
@@ -1095,9 +1128,9 @@ function seedDatabaseIfNeeded(db) {
     JSON.stringify([
       {
         matchId: 'mch-pal-fla-live',
-        matchLabel: 'SE Palmeiras vs CR Flamengo',
-        market: 'Resultado Final (1X2)',
-        selection: 'SE Palmeiras',
+        matchLabel: 'FURIA Esports vs Imperial Esports (CS2)',
+        market: 'Vencedor da Série (MD3)',
+        selection: 'FURIA Esports',
         odds: 1.58
       }
     ]),
@@ -1114,7 +1147,7 @@ function seedDatabaseIfNeeded(db) {
     now
   );
 
-  // 9. Notificações Iniciais
+  // 9. Notificações Iniciais (Esports-First)
   const notifications = [
     {
       id: 'ntf-01',
@@ -1122,31 +1155,31 @@ function seedDatabaseIfNeeded(db) {
       category: 'PAYMENT',
       channels: ['IN_APP', 'EMAIL', 'PUSH'],
       title: 'PIX Confirmado Instantaneamente (SPI BCB)',
-      message: 'Transação TX-PIX-2026-0001 de R$ 5.000,00 conciliada com código EndToEndId e gravada no Ledger Imutável SHA-256.'
+      message: 'Transação TX-PIX-2026-0001 de R$ 5.000,00 (Inscrição CBCS Major CS2) conciliada e gravada no Ledger Imutável SHA-256.'
     },
     {
       id: 'ntf-02',
       user_id: 'usr-admin-01',
       category: 'MATCH',
       channels: ['IN_APP', 'PUSH'],
-      title: 'GOL AO VIVO • SE Palmeiras 2 x 1 CR Flamengo (61\')',
-      message: 'Atualização via feed oficial CBF Opta: Estêvão Willian marca para o Palmeiras! Cotações Ao Vivo recalibradas.'
+      title: 'CLUTCH AO VIVO CS2 • FURIA 11 x 9 Imperial (Mirage R21)',
+      message: 'Telemetria Valve GSI: KSCERATO vence Clutch 1v2 no Bomb A! Cotações Ao Vivo da MD3 recalibradas.'
     },
     {
       id: 'ntf-03',
       user_id: 'usr-admin-01',
       category: 'TOURNAMENT',
       channels: ['IN_APP', 'EMAIL'],
-      title: 'Premiação Automática Calculada • Série A 2026',
-      message: 'Fundo líquido de R$ 90.000,00 garantido em custódia: R$ 54.000 (1º), R$ 22.500 (2º), R$ 9.000 (3º) e R$ 4.500 (Artilheiro).'
+      title: 'Premiação Automática Calculada • CBCS Major Brasil CS2',
+      message: 'Prize Pool líquido de R$ 90.000,00 garantido em custódia: R$ 54.000 (1º), R$ 22.500 (2º), R$ 9.000 (3º) e R$ 4.500 (MVP HLTV).'
     },
     {
       id: 'ntf-04',
       user_id: 'usr-admin-01',
       category: 'SECURITY',
       channels: ['IN_APP', 'EMAIL'],
-      title: 'Auditoria HSM & Monitoramento ML Ativos',
-      message: 'Chave mestra AES-256-GCM ativa no Slot 0 do HSM e motor anti-manipulação Sportradar/ML operando com 0 violações críticas.'
+      title: 'Auditoria HSM & Integridade ESIC / ML Ativos',
+      message: 'Chave mestra AES-256-GCM ativa no Slot 0 do HSM e motor anti-match-fixing (ESIC + Lei 14.790) operando com 0 violações.'
     }
   ];
 
@@ -1171,8 +1204,8 @@ function seedDatabaseIfNeeded(db) {
     'Carlos Eduardo',
     'KYC_VERIFICATION',
     'HIGH',
-    'Validação de Comprovante de Residência e CNH Digital',
-    'Enviei minha CNH Digital ICP-Brasil e conta de energia para liberar depósitos via PIX.',
+    'Validação de Comprovante de Residência e CNH Digital para Apostas Esports',
+    'Enviei minha CNH Digital ICP-Brasil e conta de energia para liberar depósitos via PIX no CBCS Major.',
     'OPEN',
     'moderator',
     null,
@@ -1189,15 +1222,15 @@ function seedDatabaseIfNeeded(db) {
   `).run(
     'TCK-2026-02',
     'usr-pro-01',
-    'Rafael Mendonça',
+    'Rafael "QuantCS" Mendonça',
     'TOURNAMENT_HOMOLOGATION',
     'MEDIUM',
-    'Homologação de súmula eletrônica da Copa Campeonei',
-    'Solicito sincronização do critério de desempate por cartões amarelos na rodada semifinal.',
+    'Sincronização de Telemetria Valve GSI e Veto de Mapas MD3',
+    'Solicito homologação do log de veto de mapas (Mirage / Ancient / Nuke) da semifinal do CBCS.',
     'RESOLVED',
     'moderator',
-    'Súmula sincronizada via API oficial da FPF.',
-    'Marina Costa (Moderadora)',
+    'Logs do servidor CS2 sincronizados via API oficial GRID Esports.',
+    'Marina Costa (Head Marshal)',
     now,
     now
   );
@@ -1210,9 +1243,9 @@ function seedDatabaseIfNeeded(db) {
     'DSC-2026-01',
     'USER',
     'usr-insider-01',
-    'Gabriel Silva (Atleta Federado CBF)',
+    'Gabriel "kNgV" Silva (Pro Player Inscrito CBCS)',
     'INSIDER_BLOCK_LEI_14790',
-    'Bloqueio preventivo de apostas conforme Art. 26 da Lei nº 14.790/2023 (vedação a atletas e árbitros inscritos em competições oficiais).',
+    'Bloqueio preventivo de apostas conforme Art. 26 da Lei nº 14.790/2023 e Código de Integridade ESIC (vedação a pro-players e coaches inscritos em torneios oficiais).',
     'Lucas Fortunato',
     'super_admin',
     now

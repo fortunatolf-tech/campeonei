@@ -327,12 +327,12 @@ class ApiRouter {
       });
     }
 
-    // 8. MÓDULO 1: Cadastro de Federações Esportivas
+    // 8. MÓDULO 1: Cadastro de Federações e Publishers de E-Sports
     if (pathname === '/api/federations' && method === 'POST') {
       if (!user) return this._sendJson(res, 401, { error: 'AUTH_REQUIRED' });
-      const { acronym, name, sport = 'Futebol', state = 'SP', presidentName, officialWebsite, officialFeedProvider } = bodyData || {};
+      const { acronym, name, sport = 'CS2', state = 'SP', presidentName, officialWebsite, officialFeedProvider } = bodyData || {};
       if (!acronym || !name) {
-        return this._sendJson(res, 400, { error: 'VALIDATION_ERROR', message: 'Sigla e nome da federação são obrigatórios.' });
+        return this._sendJson(res, 400, { error: 'VALIDATION_ERROR', message: 'Sigla e nome da federação/liga são obrigatórios.' });
       }
       const id = `fed-${String(acronym).toLowerCase().replace(/[^a-z0-9]/g, '')}-${Date.now().toString(36).slice(-4)}`;
       const now = new Date().toISOString();
@@ -341,7 +341,7 @@ class ApiRouter {
           INSERT INTO federations (
             id, acronym, name, sport, country, state, president_name,
             official_website, official_feed_provider, verified_badge, logo_color, created_by, created_at
-          ) VALUES (?, ?, ?, ?, 'Brasil', ?, ?, ?, ?, 1, '#006C4C', ?, ?)
+          ) VALUES (?, ?, ?, ?, 'Brasil', ?, ?, ?, ?, 1, '#00E699', ?, ?)
         `)
         .run(
           id,
@@ -351,38 +351,38 @@ class ApiRouter {
           state,
           presidentName || user.name,
           officialWebsite || 'https://campeonei.com.br',
-          officialFeedProvider || 'Campeonei Official Sync API',
+          officialFeedProvider || 'GRID Esports / Valve GSI Official Sync API',
           user.id,
           now
         );
 
       const created = this.db.prepare('SELECT * FROM federations WHERE id = ?').get(id);
       return this._sendJson(res, 201, {
-        message: 'Federação esportiva registrada e homologada com sucesso.',
+        message: 'Federação / Liga de E-Sports registrada e homologada com sucesso.',
         federation: created
       });
     }
 
-    // 9. MÓDULO 1: Registro de Times com Elenco, Estatísticas e Histórico
+    // 9. MÓDULO 1: Registro de Organizações (Times) com Line-up, Estatísticas e Histórico
     if (pathname === '/api/teams' && method === 'POST') {
       if (!user) return this._sendJson(res, 401, { error: 'AUTH_REQUIRED' });
       const {
         federationId = 'fed-cbf',
         name,
         shortName,
-        sport = 'Futebol',
+        sport = 'CS2',
         city = 'São Paulo',
         state = 'SP',
         foundedYear = 2020,
-        stadium = 'Arena Campeonei',
-        coachName = 'Comissão Técnica Oficial',
-        primaryColor = '#006C4C',
+        stadium = 'Gaming Office / Arena Campeonei',
+        coachName = 'Head Coach Oficial',
+        primaryColor = '#00E699',
         roster = [],
         history = {}
       } = bodyData || {};
 
       if (!name || !shortName) {
-        return this._sendJson(res, 400, { error: 'VALIDATION_ERROR', message: 'Nome e sigla do time são obrigatórios.' });
+        return this._sendJson(res, 400, { error: 'VALIDATION_ERROR', message: 'Nome e TAG da organização são obrigatórios.' });
       }
 
       const id = `team-${String(shortName).toLowerCase().replace(/[^a-z0-9]/g, '')}-${Date.now().toString(36).slice(-4)}`;
@@ -391,11 +391,11 @@ class ApiRouter {
         Array.isArray(roster) && roster.length > 0
           ? roster
           : [
-              { number: 1, name: 'Goleiro Titular', position: 'Goleiro', age: 26, rating: 82, goals: 0, assists: 0 },
-              { number: 10, name: 'Capitão & Armador', position: 'Meia', age: 27, rating: 85, goals: 8, assists: 10 },
-              { number: 9, name: 'Centroavante Artilheiro', position: 'Atacante', age: 24, rating: 84, goals: 14, assists: 3 }
+              { number: 1, name: 'IGL & Capitão', position: 'IGL / Support', age: 25, rating: 1.12, goals: 380, assists: 140 },
+              { number: 2, name: 'Star AWPer / Carry', position: 'AWPer / Duelist', age: 22, rating: 1.21, goals: 490, assists: 95 },
+              { number: 3, name: 'Entry Fragger Titular', position: 'Entry / Rifler', age: 21, rating: 1.16, goals: 445, assists: 110 }
             ];
-      const defaultStats = { played: 10, wins: 6, draws: 2, losses: 2, goalsFor: 18, goalsAgainst: 9, form: ['V', 'V', 'E', 'D', 'V'] };
+      const defaultStats = { played: 10, wins: 7, draws: 0, losses: 3, goalsFor: 16, goalsAgainst: 8, form: ['V', 'V', 'V', 'D', 'V'] };
       const defaultHistory = { nationalTitles: Number(history.nationalTitles || 1), regionalTitles: Number(history.regionalTitles || 2), lastChampionYear: 2025 };
 
       this.db
@@ -404,7 +404,7 @@ class ApiRouter {
             id, federation_id, name, short_name, sport, city, state, founded_year,
             stadium, coach_name, primary_color, secondary_color,
             roster_json, stats_json, history_json, elo_rating, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '#FFFFFF', ?, ?, ?, 1750, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '#FFFFFF', ?, ?, ?, 1850, ?)
         `)
         .run(
           id,
@@ -426,7 +426,7 @@ class ApiRouter {
 
       const created = this.db.prepare('SELECT * FROM teams WHERE id = ?').get(id);
       return this._sendJson(res, 201, {
-        message: 'Time registrado com elenco, estatísticas e histórico completos.',
+        message: 'Organização de E-Sports registrada com line-up, estatísticas e histórico completos.',
         team: {
           ...created,
           roster: JSON.parse(created.roster_json),
@@ -447,15 +447,15 @@ class ApiRouter {
       const {
         federationId = 'fed-cbf',
         name,
-        sport = 'Futebol',
-        season = '2026',
+        sport = 'CS2',
+        season = '2026 Split 1',
         format = 'PONTOS_CORRIDOS',
         maxTeams = 16,
         entryFee = 1500,
         platformFeePct = 10,
-        scoringRules = { win: 3, draw: 1, loss: 0 },
-        tiebreakerRules = ['WINS', 'GOAL_DIFF', 'GOALS_FOR', 'HEAD_TO_HEAD', 'FAIR_PLAY'],
-        officialDataSource = 'CBF Opta / Sportradar Real-Time Sync',
+        scoringRules = { win: 3, draw: 0, loss: 0 },
+        tiebreakerRules = ['SERIES_WINS', 'MAP_DIFF', 'ROUND_DIFF', 'HEAD_TO_HEAD', 'HLTV_RATING'],
+        officialDataSource = 'Valve CS2 GSI + GRID Esports Official Feed',
         inviteEmails = []
       } = bodyData || {};
 
@@ -641,12 +641,13 @@ class ApiRouter {
       const { scoringTeam = 'HOME' } = bodyData || {};
       const newHomeScore = scoringTeam === 'HOME' ? match.home_score + 1 : match.home_score;
       const newAwayScore = scoringTeam === 'AWAY' ? match.away_score + 1 : match.away_score;
-      const newMinute = Math.min(90, match.minute + 3);
+      const newMinute = Math.min(90, match.minute + 1);
 
       const stats = JSON.parse(match.stats_json);
       const odds = JSON.parse(match.odds_json);
       const scorerLabel = scoringTeam === 'HOME' ? match.home_team_name : match.away_team_name;
-      stats.lastEvent = `${newMinute}' GOL OFICIAL CONFIRMADO (${match.official_feed_code}) - ${scorerLabel}!`;
+      const pointTerm = match.sport === 'League of Legends' ? 'ABATE + OBJETIVO' : 'ROUND VENCIDO';
+      stats.lastEvent = `R${newMinute} • ${pointTerm} (${match.official_feed_code}) - ${scorerLabel}!`;
       if (scoringTeam === 'HOME') {
         stats.shotsOnTargetHome += 1;
         odds.matchWinner.home = Number(Math.max(1.08, odds.matchWinner.home * 0.78).toFixed(2));
@@ -662,7 +663,7 @@ class ApiRouter {
         .prepare('UPDATE matches SET home_score = ?, away_score = ?, minute = ?, stats_json = ?, odds_json = ?, updated_at = ? WHERE id = ?')
         .run(newHomeScore, newAwayScore, newMinute, JSON.stringify(stats), JSON.stringify(odds), now, matchId);
 
-      // Atualiza tabela de classificação do campeonato aplicando critérios de desempate (Pontos -> Vitórias -> Saldo -> Gols Pró)
+      // Atualiza tabela de classificação do campeonato aplicando critérios de desempate (Pontos -> Vitórias -> Saldo de Mapas/Rounds)
       const trn = this.db.prepare('SELECT * FROM tournaments WHERE id = ?').get(match.tournament_id);
       let updatedStandings = [];
       if (trn) {
@@ -699,13 +700,13 @@ class ApiRouter {
         this._createNotification(
           user.id,
           'MATCH',
-          `GOL OFICIAL (${newMinute}') • ${match.home_short} ${newHomeScore} x ${newAwayScore} ${match.away_short}`,
-          `${stats.lastEvent}. Classificação e cotações ao vivo atualizadas automaticamente.`
+          `TELEMETRIA AO VIVO (R${newMinute}) • ${match.home_short} ${newHomeScore} x ${newAwayScore} ${match.away_short}`,
+          `${stats.lastEvent}. Classificação e odds da série atualizadas automaticamente.`
         );
       }
 
       return this._sendJson(res, 200, {
-        message: 'Placar, estatísticas e classificação sincronizados via Fonte de Dados Oficial.',
+        message: 'Placar do mapa/série, telemetria e classificação sincronizados via Fonte de Dados Oficial.',
         ...payload
       });
     }
@@ -1013,14 +1014,14 @@ class ApiRouter {
       }
     }
 
-    // 16. MÓDULO 3: Mercado de Previsões Esportivas (Publicar Previsão e Comprar Previsão)
+    // 16. MÓDULO 3: Mercado de Previsões de E-Sports (Publicar Previsão e Comprar Previsão)
     if (pathname === '/api/predictions' && method === 'POST') {
       if (!user) return this._sendJson(res, 401, { error: 'AUTH_REQUIRED' });
       const {
-        sport = 'Futebol',
+        sport = 'CS2',
         matchId = 'mch-pal-fla-live',
-        matchLabel = 'SE Palmeiras vs CR Flamengo',
-        marketType = 'Handicap Asiático',
+        matchLabel = 'FURIA Esports vs Imperial Esports (CS2)',
+        marketType = 'Handicap de Mapas',
         selectionLabel,
         recommendedOdds = 1.9,
         confidencePct = 88,
@@ -1371,7 +1372,7 @@ class ApiRouter {
       }));
 
     const matches = this.db
-      .prepare('SELECT * FROM matches ORDER BY status ASC, minute DESC')
+      .prepare("SELECT * FROM matches ORDER BY CASE WHEN id = 'mch-pal-fla-live' THEN 0 ELSE 1 END, status ASC")
       .all()
       .map((m) => ({
         ...m,
